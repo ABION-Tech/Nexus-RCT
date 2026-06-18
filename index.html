@@ -384,7 +384,7 @@
     #login-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
     #login-modal.show { display: flex; }
     .login-box { background: var(--surface); border: 1px solid rgba(108,99,255,0.3); border-radius: 16px; padding: 34px; width: 340px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
-    .login-box h2 { font-size: 20px; font-weight: 800; margin-bottom: 4px; background: linear-gradient(135deg,#6c63ff,#00e5b0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .login-box h2 { font-size: 20px; font-weight: 800; margin-bottom: 4px; background: linear-gradient(135deg,#6c63ff,#00e5b0); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .login-box p { font-size: 11px; color: var(--muted); font-family: "Space Mono", monospace; margin-bottom: 22px; }
     #login-error { font-size: 11px; color: var(--danger); font-family: "Space Mono", monospace; margin-bottom: 10px; min-height: 16px; }
 
@@ -446,7 +446,7 @@
         <option value="">— Select —</option>
         <option value="AYO">Ayo T. Joshua</option>
         <option value="SHINA">Shina Samson</option>
-        <option value="DAN">Darlington</option>
+        <option value="DAN">Daniel Bowman</option>
         <option value="PAMELA">Pamela</option>
         <option value="OYE">Oyewole Joldeo</option>
       </select>
@@ -974,7 +974,7 @@ const FORM_SCHEMAS = {
       {section:'Assignment'},
       {key:'Assigned To',label:'Assigned To',type:'select',options:['','Ayo T. Joshua','Shina Samson','Israel Idowu','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)'],required:true,leaderOnly:true},
       {key:'Assigned_To_Email',label:'Assignee Email',type:'email',placeholder:'name@rescuetap.org',leaderOnly:true},
-      {key:'Support Person',label:'Support Person',type:'select',options:['','Ayo T. Joshua','Shina Samson','Darlington','Oye Joldeo'],leaderOnly:true},
+      {key:'Support Person',label:'Support Person',type:'select',options:['','Ayo T. Joshua','Shina Samson','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)'],leaderOnly:true},
       {key:'Business / Dept',label:'Department',type:'select',options:['','COS','Partnerships','Marketing','Tech','Operations','Finance','HR'],leaderOnly:true},
       {section:'Priority & Timing'},
       {key:'Priority',label:'Priority',type:'select',options:['URGENT','HIGH','MEDIUM','LOW'],required:true,leaderOnly:true},
