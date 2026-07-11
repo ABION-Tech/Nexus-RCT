@@ -558,6 +558,10 @@
         Marketing
       </a>
       <div class="nav-section">Ops</div>
+      <a class="nav-item" id="nav-team-item" data-view="team" style="display:none">
+        <svg fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
+        Team
+      </a>
       <a class="nav-item" data-view="eod">
         <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm11 1H6v8l4-2 4 2V6z" clip-rule="evenodd"/></svg>
         EOD Report
@@ -874,6 +878,12 @@
         </div>
       </div>
 
+      <!-- TEAM -->
+      <div id="view-team" class="view">
+        <div class="card-head" style="padding:0 0 16px"><h3>Team Directory</h3><span class="sub">Test email mapping — 14 live inboxes + 7 placeholder</span></div>
+        <div id="team-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
+      </div>
+
       <!-- FOLLOW-UPS -->
       <div id="view-followup" class="view">
         <div class="followup-grid">
@@ -1053,18 +1063,18 @@ const FORM_SCHEMAS = {
 const TEAM_EMAILS = {
   'Ayo T. Joshua'           : 'othnielemry@gmail.com',
   'Shina Samson'            : 'abionnexus@gmail.com',
-  'Israel Idowu'            : 'israel@rescuetap.org',
-  'Darlington'              : 'darlington@rescuetap.org',
-  'Chizaram'                : 'chizaram@rescuetap.org',
-  'Adetola'                 : 'adetola@rescuetap.org',
-  'Titi'                    : 'titi@rescuetap.org',
-  'Naruka'                  : 'naruka@rescuetap.org',
-  'Bukayo'                  : 'bukayo@rescuetap.org',
-  'Joshua (Content)'        : 'joshua.content@rescuetap.org',
-  'Seth'                    : 'seth@rescuetap.org',
-  'Nora'                    : 'nora@rescuetap.org',
-  'Rashidat'                : 'rashidat@rescuetap.org',
-  'Muyi'                    : 'muyi@rescuetap.org',
+  'Israel Idowu'            : 'abionindustries@gmail.com',
+  'Darlington'              : 'newageskillsphere@gmail.com',
+  'Chizaram'                : 'abionplc@gmail.com',
+  'Adetola'                 : 'othnielemrys@gmail.com',
+  'Titi'                    : 'realhmfs@gmail.com',
+  'Naruka'                  : 'ecovaluesindustriesltd@gmail.com',
+  'Bukayo'                  : 'afromationstudios.abion@gmail.com',
+  'Joshua (Content)'        : 'teaofabion@gmail.com',
+  'Seth'                    : 'parallelinfinitystudio@gmail.com',
+  'Nora'                    : 'abionspace@gmail.com',
+  'Rashidat'                : 'ayomidetjoshua@gmail.com',
+  'Muyi'                    : 'abionsynergia@gmail.com',
   'Perpetual'               : 'perpetual@rescuetap.org',
   'Christiana'              : 'christiana@rescuetap.org',
   'Mark'                    : 'mark@rescuetap.org',
@@ -1258,6 +1268,7 @@ function renderView(name) {
     case 'followup':   renderFollowup(); break;
     case 'failsafe':   renderFailsafe(); break;
     case 'automation': renderAutomation(); break;
+    case 'team':       renderTeam(); break;
   }
 }
 
@@ -1596,6 +1607,66 @@ async function toggleAutomation(key,enabled) {
 }
 
 // ============================================================
+//  TEAM DIRECTORY
+// ============================================================
+const TEAM_ROLES = {
+  'Ayo T. Joshua'  : { role:'Deputy Operations', dept:'Leadership', leader:true },
+  'Shina Samson'   : { role:'Acting COO',         dept:'Leadership', leader:true },
+  'Israel Idowu'   : { role:'Tech',               dept:'Technology' },
+  'Darlington'     : { role:'Tech',               dept:'Technology' },
+  'Chizaram'       : { role:'Grants',             dept:'Grants & Funding' },
+  'Adetola'        : { role:'Partnerships',       dept:'Partnerships' },
+  'Titi'           : { role:'Content',            dept:'Content & Media' },
+  'Naruka'         : { role:'Data & Research',    dept:'Data' },
+  'Bukayo'         : { role:'Outreach',           dept:'Outreach' },
+  'Joshua (Content)': { role:'Content',           dept:'Content & Media' },
+  'Seth'           : { role:'Partnerships',       dept:'Partnerships' },
+  'Nora'           : { role:'Content',            dept:'Content & Media' },
+  'Rashidat'       : { role:'Grants',             dept:'Grants & Funding' },
+  'Muyi'           : { role:'Outreach',           dept:'Outreach' },
+  'Perpetual'      : { role:'Admin',              dept:'Operations' },
+  'Christiana'     : { role:'Admin',              dept:'Operations' },
+  'Mark'           : { role:'Tech',               dept:'Technology' },
+  'Nehemiah'       : { role:'Outreach',           dept:'Outreach' },
+  'Joshua Alex'    : { role:'Partnerships',       dept:'Partnerships' },
+  'Mr Sam'         : { role:'Data & Research',    dept:'Data' },
+  'Joshua (Tech)'  : { role:'Tech',               dept:'Technology' },
+};
+function renderTeam() {
+  if(!isLeader()){showToast('Leader login required','error');loadView('dashboard');return;}
+  // Prefer sheet data if populated, else fall back to hardcoded TEAM_EMAILS
+  const sheetRows = (appData.team||[]).filter(r=>r['Name']);
+  const members = sheetRows.length
+    ? sheetRows.map(r=>[r['Name'], r['Email']||''])
+    : Object.entries(TEAM_EMAILS);
+  const isTest  = e => e.endsWith('@gmail.com');
+  const initials= n => n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  const colors  = ['#5b52f0','#00d4a0','#f0a030','#f05060','#4090f0','#a060f0','#20c0a0'];
+  document.getElementById('team-grid').innerHTML = members.map(([name,email],i)=>{
+    const info   = TEAM_ROLES[name] || { role:'Team Member', dept:'Operations' };
+    const live   = isTest(email);
+    const color  = colors[i % colors.length];
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:38px;height:38px;border-radius:50%;background:${color}22;border:2px solid ${color}55;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${color};font-family:'Space Mono',monospace;flex-shrink:0">${initials(name)}</div>
+        <div style="min-width:0">
+          <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">${info.role}</div>
+        </div>
+        ${info.leader?'<span style="margin-left:auto;font-size:9px;background:rgba(91,82,240,0.15);color:#8880ff;border:1px solid rgba(91,82,240,0.3);padding:2px 7px;border-radius:20px;font-family:Space Mono,monospace;flex-shrink:0">LEAD</span>':''}
+      </div>
+      <div style="font-size:10px;font-family:'Space Mono',monospace;padding:6px 8px;background:var(--surface2);border-radius:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="${email}">${email}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${info.dept}</span>
+        <span style="font-size:9px;padding:2px 7px;border-radius:20px;font-family:'Space Mono',monospace;background:${live?'rgba(0,212,160,0.12)':'rgba(90,90,122,0.15)'};color:${live?'var(--accent2)':'var(--muted)'}">
+          ${live?'✓ TEST LIVE':'placeholder'}
+        </span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
 //  NAV BADGES
 // ============================================================
 function updateNavBadges() {
@@ -1793,6 +1864,8 @@ function updateLeaderUI() {
   if(slb) { slb.textContent=show?('⚡ '+leaderName.split(' ')[0]):'Login'; slb.classList.toggle('green',show); }
   const stb=document.getElementById('su-theme-btn');
   if(stb) stb.textContent=(document.documentElement.getAttribute('data-theme')==='light'?'🌙':'☀')+' Theme';
+  const teamNav=document.getElementById('nav-team-item');
+  if(teamNav) teamNav.style.display=show?'flex':'none';
 }
 
 // ============================================================
