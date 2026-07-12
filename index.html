@@ -396,6 +396,10 @@
     .login-box p { font-size: 11px; color: var(--muted); font-family: "Space Mono", monospace; margin-bottom: 22px; }
     #login-error { font-size: 11px; color: var(--danger); font-family: "Space Mono", monospace; margin-bottom: 10px; min-height: 16px; }
     #cp-error { font-size: 11px; color: var(--danger); font-family: "Space Mono", monospace; margin-bottom: 10px; min-height: 16px; }
+    .pw-field-wrap { position: relative; display: flex; align-items: center; }
+    .pw-field-wrap .form-input { padding-right: 52px; }
+    .pw-toggle-btn { position: absolute; right: 6px; background: none; border: none; color: var(--accent2); font-size: 10px; font-family: "Space Mono", monospace; font-weight: 700; letter-spacing: .03em; cursor: pointer; padding: 4px 8px; }
+    .pw-toggle-btn:hover { color: var(--text); }
 
     /* TOAST */
     #toast { position: fixed; bottom: 22px; right: 22px; background: var(--surface3); border: 1px solid var(--border); border-radius: 8px; padding: 11px 16px; font-size: 13px; font-weight: 600; z-index: 999; transform: translateY(80px); opacity: 0; transition: all 0.3s; pointer-events: none; max-width: 300px; }
@@ -493,7 +497,10 @@
     </div>
     <div class="form-group">
       <label>Passphrase</label>
-      <input type="password" class="form-input" id="login-pass" placeholder="Your secret passphrase" autocomplete="off" onkeydown="if(event.key==='Enter')submitLogin()">
+      <div class="pw-field-wrap">
+        <input type="password" class="form-input" id="login-pass" placeholder="Your secret passphrase" autocomplete="off" onkeydown="if(event.key==='Enter')submitLogin()">
+        <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('login-pass', this)" aria-label="Show passphrase">Show</button>
+      </div>
     </div>
     <div id="login-error"></div>
     <button class="btn-primary" id="login-btn" style="width:100%;margin-bottom:10px" onclick="submitLogin()">Authenticate</button>
@@ -508,15 +515,24 @@
     <p>Update your leader passphrase</p>
     <div class="form-group">
       <label>Current Passphrase</label>
-      <input type="password" class="form-input" id="cp-current" placeholder="Current passphrase" autocomplete="off">
+      <div class="pw-field-wrap">
+        <input type="password" class="form-input" id="cp-current" placeholder="Current passphrase" autocomplete="off">
+        <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('cp-current', this)" aria-label="Show passphrase">Show</button>
+      </div>
     </div>
     <div class="form-group">
       <label>New Passphrase</label>
-      <input type="password" class="form-input" id="cp-new" placeholder="New passphrase (min 6 characters)" autocomplete="off">
+      <div class="pw-field-wrap">
+        <input type="password" class="form-input" id="cp-new" placeholder="New passphrase (min 6 characters)" autocomplete="off">
+        <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('cp-new', this)" aria-label="Show passphrase">Show</button>
+      </div>
     </div>
     <div class="form-group">
       <label>Confirm New Passphrase</label>
-      <input type="password" class="form-input" id="cp-confirm" placeholder="Retype new passphrase" autocomplete="off" onkeydown="if(event.key==='Enter')submitChangePassword()">
+      <div class="pw-field-wrap">
+        <input type="password" class="form-input" id="cp-confirm" placeholder="Retype new passphrase" autocomplete="off" onkeydown="if(event.key==='Enter')submitChangePassword()">
+        <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('cp-confirm', this)" aria-label="Show passphrase">Show</button>
+      </div>
     </div>
     <div id="cp-error"></div>
     <button class="btn-primary" id="cp-btn" style="width:100%;margin-bottom:10px" onclick="submitChangePassword()">Update Passphrase</button>
@@ -740,6 +756,8 @@
       <!-- TASKS -->
       <div id="view-tasks" class="view">
         <div class="filter-bar">
+          <label>Search</label>
+          <input id="task-search" class="filter-input" type="text" placeholder="Search task, ID, assignee…" style="max-width:170px" oninput="renderTasks()">
           <label>Status</label>
           <select id="task-filter-status" class="filter-input" onchange="renderTasks()">
             <option value="">All</option>
@@ -751,7 +769,7 @@
             <option value="Cancelled">Cancelled</option>
           </select>
           <label>Assignee</label>
-          <select id="task-filter-owner" class="filter-input" onchange="_taskFilterShowAll=false;renderTasks()" style="max-width:130px">
+          <select id="task-filter-owner" class="filter-input" onchange="_taskFilterShowAll=true;renderTasks()" style="max-width:130px">
             <option value="">— My Tasks —</option>
           </select>
           <button class="filter-clear" style="background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.2);color:var(--accent2);font-size:10px" onclick="clearOwnerFilter()" title="See all team tasks">👁 All</button>
@@ -944,7 +962,7 @@
 
       <!-- TEAM -->
       <div id="view-team" class="view">
-        <div class="card-head" style="padding:0 0 16px"><h3>Team Directory</h3><span class="sub">Test email mapping — 14 live inboxes + 7 placeholder</span></div>
+        <div class="card-head" style="padding:0 0 16px"><h3>Team Directory</h3></div>
         <div id="team-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
       </div>
 
@@ -1386,7 +1404,8 @@ function renderDashboard() {
   if(blocked>0) alerts.push('<div class="alert-banner danger"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg><div><h4>'+blocked+' task(s) BLOCKED</h4><p>Immediate attention needed — <button class="btn-sm danger" onclick="loadView(&apos;failsafe&apos;)" style="display:inline">View Blocked</button></p></div></div>');
   if(overdue>0) alerts.push('<div class="alert-banner warn"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg><div><h4>'+overdue+' task(s) not updated in 2+ days</h4><p><button class="btn-sm" onclick="loadView(&apos;followup&apos;)" style="display:inline">View Follow-Ups</button></p></div></div>');
   document.getElementById('dashboard-alerts').innerHTML = alerts.join('');
-  document.getElementById('dash-tasks-tbody').innerHTML = tasks.slice(0,6).map(t=>'<tr onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" style="cursor:pointer"><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+'</td><td>'+t['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(t.Deadline||'--')+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td>'+(t.Notes||'--')+'</td></tr>').join('')||noDataRow(7,'No tasks. Sync or add one.');
+  const recentTasks = [...tasks].sort((a,b)=>(b.Last_Updated||b.ID||'').localeCompare(a.Last_Updated||a.ID||''));
+  document.getElementById('dash-tasks-tbody').innerHTML = recentTasks.slice(0,6).map(t=>'<tr onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" style="cursor:pointer"><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+'</td><td>'+t['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(t.Deadline||'--')+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td>'+(t.Notes||'--')+'</td></tr>').join('')||noDataRow(7,'No tasks. Sync or add one.');
   document.getElementById('dash-automations').innerHTML = autos.slice(0,4).map(a=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;font-weight:600">'+a.Label+'</span><span class="badge-pill '+(a.Enabled?'badge-green':'badge-gray')+'">'+(a.Enabled?'ON':'OFF')+'</span></div>').join('')||'<p style="color:var(--muted);font-size:12px">No automation data</p>';
 }
 
@@ -1396,6 +1415,7 @@ function renderDashboard() {
 let _taskFilterShowAll = false;
 function clearTaskFilters() {
   _taskFilterShowAll = false; // re-lock to personal filter
+  const se=document.getElementById('task-search'); if(se) se.value='';
   const s=document.getElementById('task-filter-status'); if(s) s.value='';
   const o=document.getElementById('task-filter-owner');
   if(o) o.value = localStorage.getItem('nexus_eod_who') || '';
@@ -1414,14 +1434,19 @@ function renderTasks() {
   if(ownerSel && !_taskFilterShowAll && savedWho) ownerSel.value = savedWho;
 
   let tasks=[...(appData.tasks||[])];
+  const fSearch  =(document.getElementById('task-search')||{}).value||'';
   const fStatus  =(document.getElementById('task-filter-status')  ||{}).value||'';
   const fOwner   =(ownerSel||{}).value||'';
   const fPriority=(document.getElementById('task-filter-priority')||{}).value||'';
+  if(fSearch.trim()){
+    const q=fSearch.trim().toLowerCase();
+    tasks=tasks.filter(t=>[t.ID,t['Task Description'],t['Assigned To'],t['Support Person'],t['Business / Dept'],t.Notes].some(v=>String(v??'').toLowerCase().includes(q)));
+  }
   if(fStatus)   tasks=tasks.filter(t=>t.Status===fStatus);
   if(fOwner)    tasks=tasks.filter(t=>String(t['Assigned To']??'').split(/[,\/&+]+/).map(n=>n.trim().toLowerCase()).includes(fOwner.trim().toLowerCase())); // split multi-assignee field and check if selected name is one of them
   if(fPriority) tasks=tasks.filter(t=>t.Priority===fPriority);
   const fc=document.getElementById('tasks-filter-count');
-  if(fc) fc.textContent=(fStatus||fOwner||fPriority)?tasks.length+' shown':'';
+  if(fc) fc.textContent=(fSearch||fStatus||fOwner||fPriority)?tasks.length+' shown':'';
   const sort=(document.getElementById('task-sort')||{}).value||'newest';
   const priOrd={URGENT:0,HIGH:1,MEDIUM:2,LOW:3};
   if(sort==='newest')       tasks.sort((a,b)=>(b.Last_Updated||b.ID||'').localeCompare(a.Last_Updated||a.ID||''));
@@ -1703,12 +1728,10 @@ function renderTeam() {
   const members = sheetRows.length
     ? sheetRows.map(r=>[r['Name'], r['Email']||''])
     : Object.entries(TEAM_EMAILS);
-  const isTest  = e => e.endsWith('@gmail.com');
   const initials= n => n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
   const colors  = ['#5b52f0','#00d4a0','#f0a030','#f05060','#4090f0','#a060f0','#20c0a0'];
   document.getElementById('team-grid').innerHTML = members.map(([name,email],i)=>{
     const info   = TEAM_ROLES[name] || { role:'Team Member', dept:'Operations' };
-    const live   = isTest(email);
     const color  = colors[i % colors.length];
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;align-items:center;gap:10px">
@@ -1720,12 +1743,7 @@ function renderTeam() {
         ${info.leader?'<span style="margin-left:auto;font-size:9px;background:rgba(91,82,240,0.15);color:#8880ff;border:1px solid rgba(91,82,240,0.3);padding:2px 7px;border-radius:20px;font-family:Space Mono,monospace;flex-shrink:0">LEAD</span>':''}
       </div>
       <div style="font-size:10px;font-family:'Space Mono',monospace;padding:6px 8px;background:var(--surface2);border-radius:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="${email}">${email}</div>
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${info.dept}</span>
-        <span style="font-size:9px;padding:2px 7px;border-radius:20px;font-family:'Space Mono',monospace;background:${live?'rgba(0,212,160,0.12)':'rgba(90,90,122,0.15)'};color:${live?'var(--accent2)':'var(--muted)'}">
-          ${live?'✓ TEST LIVE':'placeholder'}
-        </span>
-      </div>
+      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${info.dept}</div>
     </div>`;
   }).join('');
 }
@@ -1915,6 +1933,15 @@ async function logoutLeader() {
   leaderToken=null; leaderName=null;
   sessionStorage.removeItem('nexus_leader_token'); sessionStorage.removeItem('nexus_leader_name');
   updateLeaderUI(); showToast('Signed out','success');
+}
+
+function togglePwVisibility(inputId, btn) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  const show = el.type === 'password';
+  el.type = show ? 'text' : 'password';
+  btn.textContent = show ? 'Hide' : 'Show';
+  btn.setAttribute('aria-label', show ? 'Hide passphrase' : 'Show passphrase');
 }
 
 function openChangePasswordModal() {
@@ -2158,7 +2185,7 @@ async function submitForm() {
       const headers=schema.fields.filter(f=>!f.section).map(f=>f.key);
       const rows=batchText.split('\n').map(line=>{const vals=line.split(',').map(v=>v.trim());const obj={};headers.forEach((h,i)=>obj[h]=vals[i]||'');return obj;}).filter(r=>Object.values(r).some(v=>v));
       if(!rows.length){showToast('No data to submit','error');return;}
-      const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify({action:'batchAppend',tabName:currentTab,rows})});
+      const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify({action:'batchAppend',tabName:currentTab,rows,token:leaderToken||''})});
       const r=await res.json(); if(r.error){showToast(r.error,'error');return;} showToast('Added '+r.count+' rows','success');
     } else {
       const formData={}; body.querySelectorAll('.form-input:not([disabled])').forEach(el=>{if(el.name) formData[el.name]=el.value;});
@@ -2177,7 +2204,7 @@ async function submitForm() {
       const isNewTask = !editingRowId && currentTab==='1. Master Tasks';
       const payload=editingRowId
         ?{action:(schema.updateAction||'updateRow'),tabName:currentTab,id:editingRowId,data:formData,token:leaderToken||''}
-        :{action:schema.appendAction,data:formData,...(isNewTask?{sendEmail:true}:{})};
+        :{action:schema.appendAction,data:formData,token:leaderToken||'',...(isNewTask?{sendEmail:true}:{})};
 
       const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
       const r=await res.json(); if(r.error){showToast(r.error,'error');return;} showToast(editingRowId?'Updated!':'Added!','success');
