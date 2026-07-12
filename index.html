@@ -262,6 +262,17 @@
     .drawer-tab-hint { font-size: 10px; font-family: "Space Mono", monospace; color: var(--muted); margin-top: 2px; }
     .drawer-body { flex: 1; padding: 18px; overflow-y: auto; }
     .drawer-foot { padding: 14px 18px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 10px; }
+
+    /* CHAT */
+    .chat-msg { max-width: 82%; padding: 8px 11px; border-radius: 12px; font-size: 12.5px; line-height: 1.4; background: rgba(255,255,255,0.05); border: 1px solid var(--border); align-self: flex-start; }
+    .chat-msg.mine { align-self: flex-end; background: rgba(91,82,240,0.16); border-color: rgba(91,82,240,0.3); }
+    .chat-msg .cm-author { font-size: 10px; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
+    .chat-msg.mine .cm-author { color: #8880ff; }
+    .chat-msg .cm-time { font-size: 9px; font-family: 'Space Mono', monospace; color: var(--muted); margin-top: 3px; }
+    .chat-empty { text-align: center; color: var(--muted); font-size: 12px; padding: 30px 10px; }
+    #task-thread-wrap { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 14px; }
+    #task-thread-msgs { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px 2px 10px; }
+    #task-thread-input-row { display: flex; gap: 8px; align-items: flex-end; }
     .form-group { margin-bottom: 13px; }
     .form-group label { display: block; font-size: 10px; font-weight: 700; color: var(--muted); margin-bottom: 5px; font-family: "Space Mono", monospace; letter-spacing: 0.5px; }
     .form-group label .required { color: var(--danger); margin-left: 2px; }
@@ -391,6 +402,8 @@
     #login-modal.show { display: flex; }
     #change-password-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
     #change-password-modal.show { display: flex; }
+    #add-member-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 210; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    #add-member-modal.show { display: flex; }
     .login-box { background: var(--surface); border: 1px solid rgba(108,99,255,0.3); border-radius: 16px; padding: 34px; width: 340px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
     .login-box h2 { font-size: 20px; font-weight: 800; margin-bottom: 4px; background: linear-gradient(135deg,#6c63ff,#00e5b0); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .login-box p { font-size: 11px; color: var(--muted); font-family: "Space Mono", monospace; margin-bottom: 22px; }
@@ -476,6 +489,7 @@
       }
     }
   </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -483,28 +497,36 @@
 <div id="login-modal">
   <div class="login-box">
     <h2>NEXUS</h2>
-    <p>Leader access — enter your credentials</p>
-    <div class="form-group">
-      <label>Your Name</label>
-      <select class="form-input" id="login-name">
-        <option value="">— Select —</option>
-        <option value="AYO">Ayo T. Joshua</option>
-        <option value="SHINA">Shina Samson</option>
-        <option value="DAN">Daniel Bowman</option>
-        <option value="PAMELA">Pamela</option>
-        <option value="OYE">Oyewole Joldeo</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Passphrase</label>
-      <div class="pw-field-wrap">
-        <input type="password" class="form-input" id="login-pass" placeholder="Your secret passphrase" autocomplete="off" onkeydown="if(event.key==='Enter')submitLogin()">
-        <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('login-pass', this)" aria-label="Show passphrase">Show</button>
+    <p>Sign in with your Google account to continue.</p>
+    <div id="google-signin-btn" style="display:flex;justify-content:center;margin:16px 0"></div>
+    <div id="google-signin-error"></div>
+    <p style="font-size:11px;text-align:center;opacity:0.6;margin:14px 0 6px">
+      Your Google account must be on the NEXUS team roster. Not added yet? Ask a leader.
+    </p>
+    <hr style="border:none;border-top:1px solid var(--border,#333);margin:16px 0">
+    <details>
+      <summary style="cursor:pointer;font-size:12px;opacity:0.75">Leader passphrase login (legacy)</summary>
+      <div class="form-group" style="margin-top:12px">
+        <label>Your Name</label>
+        <select class="form-input" id="login-name">
+          <option value="">— Select —</option>
+          <option value="AYO">Ayo T. Joshua</option>
+          <option value="SHINA">Shina Samson</option>
+          <option value="DAN">Daniel Bowman</option>
+          <option value="PAMELA">Pamela</option>
+          <option value="OYE">Oyewole Joldeo</option>
+        </select>
       </div>
-    </div>
-    <div id="login-error"></div>
-    <button class="btn-primary" id="login-btn" style="width:100%;margin-bottom:10px" onclick="submitLogin()">Authenticate</button>
-    <button class="btn-secondary" style="width:100%;font-size:12px" onclick="closeLoginModal()">Cancel — continue as team member</button>
+      <div class="form-group">
+        <label>Passphrase</label>
+        <div class="pw-field-wrap">
+          <input type="password" class="form-input" id="login-pass" placeholder="Your secret passphrase" autocomplete="off" onkeydown="if(event.key==='Enter')submitLogin()">
+          <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('login-pass', this)" aria-label="Show passphrase">Show</button>
+        </div>
+      </div>
+      <div id="login-error"></div>
+      <button class="btn-primary" id="login-btn" style="width:100%;margin-bottom:10px" onclick="submitLogin()">Authenticate</button>
+    </details>
   </div>
 </div>
 
@@ -537,6 +559,33 @@
     <div id="cp-error"></div>
     <button class="btn-primary" id="cp-btn" style="width:100%;margin-bottom:10px" onclick="submitChangePassword()">Update Passphrase</button>
     <button class="btn-secondary" style="width:100%;font-size:12px" onclick="closeChangePasswordModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ADD TEAM MEMBER MODAL (leader-only) -->
+<div id="add-member-modal">
+  <div class="login-box">
+    <h2>Add Team Member</h2>
+    <p>New members show up in every assignment dropdown right away.</p>
+    <div class="form-group">
+      <label>Name<span style="color:var(--danger)">*</span></label>
+      <input type="text" class="form-input" id="am-name" placeholder="Full name" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Email<span style="color:var(--danger)">*</span></label>
+      <input type="email" class="form-input" id="am-email" placeholder="name@rescuetap.org" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Role</label>
+      <input type="text" class="form-input" id="am-role" placeholder="e.g. Volunteer Coordinator (optional)" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Department</label>
+      <input type="text" class="form-input" id="am-dept" placeholder="e.g. Operations (optional)" autocomplete="off" onkeydown="if(event.key==='Enter')submitAddMember()">
+    </div>
+    <div id="am-error"></div>
+    <button class="btn-primary" id="am-btn" style="width:100%;margin-bottom:10px" onclick="submitAddMember()">Add Member</button>
+    <button class="btn-secondary" style="width:100%;font-size:12px" onclick="closeAddMemberModal()">Cancel</button>
   </div>
 </div>
 
@@ -580,6 +629,29 @@
   </div>
   <div id="mytasks-body" style="flex:1;overflow-y:auto;padding:14px 18px"></div>
 </div>
+
+<!-- TEAM CHAT PANEL -->
+<div id="chat-overlay" onclick="closeChatPanel()" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:60;display:none;backdrop-filter:blur(2px)"></div>
+<div id="chat-panel" style="position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--surface);border-left:1px solid var(--border);z-index:70;transform:translateX(100%);transition:transform 0.3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column">
+  <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <h3 style="font-size:16px;font-weight:700">💬 Team Chat</h3>
+      <div style="font-size:10px;font-family:'Space Mono',monospace;color:var(--muted);margin-top:2px" id="chat-identity-line">Chatting as —</div>
+    </div>
+    <button onclick="closeChatPanel()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1">×</button>
+  </div>
+  <div style="padding:10px 18px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button class="btn-sm" onclick="promptIdentity(true)" title="Switch who you're logged in as">Switch account</button>
+    <button class="btn-sm" onclick="teamLogoutClick()" title="Log out of chat" style="color:var(--danger)">Log out</button>
+    <button class="btn-sm" id="chat-notify-btn" onclick="toggleChatNotifications()" style="margin-left:auto">🔔 Enable notifications</button>
+  </div>
+  <div id="chat-messages" style="flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:10px"></div>
+  <div style="padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end">
+    <textarea id="chat-input" class="form-input" rows="1" placeholder="Message the team…" style="resize:none;flex:1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTeamChatMessage();}"></textarea>
+    <button class="btn-primary" style="flex-shrink:0" onclick="sendTeamChatMessage()">Send</button>
+  </div>
+</div>
+
 <div id="drawer-overlay" onclick="closeDrawer()"></div>
 <div id="drawer">
   <div class="drawer-head">
@@ -697,12 +769,16 @@
       <div class="top-gap"></div>
       <span id="topbar-time">--:--</span>
       <button class="top-btn btn-cal" onclick="loadView('meetings');setTimeout(()=>switchMtgTab('calendar'),80);" title="View task deadlines calendar">⊕ Calendar</button>
+      <button class="top-btn btn-mytasks" style="background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2);position:relative" onclick="openChatPanel()" title="Team chat">
+        💬 Chat
+        <span id="chat-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-size:9px;font-family:'Space Mono',monospace;min-width:16px;height:16px;border-radius:20px;align-items:center;justify-content:center;padding:0 4px;line-height:1">0</span>
+      </button>
       <button class="top-btn btn-mytasks" style="background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2)" onclick="openMyTasks()" title="Team member quick-update view">👤 My Tasks</button>
       <button class="top-btn btn-sync" id="btn-sync" onclick="syncData()">↻ Sync</button>
       <button class="top-btn" id="btn-theme" onclick="toggleTheme()" title="Toggle light/dark theme" style="font-size:14px;padding:0 8px">☀</button>
       <button class="top-btn" style="background:rgba(91,82,240,0.1);border-color:rgba(91,82,240,0.25);color:#8880ff" onclick="openLoginModal()" id="btn-login">Login</button>
       <button class="top-btn" id="btn-install-pwa" onclick="triggerPWAInstall()" title="Install NEXUS as app" style="display:none;background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2)">⬇ Install</button>
-      <button class="top-btn" id="btn-download-html" onclick="downloadNexusHTML()" title="Download NEXUS" style="background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2)">⬇ Save</button>
+  <!--  <button class="top-btn" id="btn-download-html" onclick="downloadNexusHTML()" title="Download NEXUS" style="background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2)">⬇ Save</button>-->  
       <button class="top-btn btn-add" id="add-btn" onclick="openDrawer()">+ NEW</button>
     </header>
 
@@ -1024,12 +1100,16 @@
 //  CONFIG
 //  Replace SCRIPT_URL with your deployed Apps Script web app URL
 // ============================================================
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyGn-a-r0aGM7JJ514X_lRnA2h5mozt4TZ7WE89S6y1a8sdmPcRYayQsIi9CW_abjd-/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBqJuyf4L75L0e2jFtYBwIdzoLYvGClsodIukVHHV3XY5p0AJzqQmp12JlMHW-2DeO/exec';
 
 // Guard: warn if SCRIPT_URL has not been configured
 if (SCRIPT_URL.includes('YOUR_SCRIPT_ID_HERE')) {
   console.error('NEXUS: SCRIPT_URL is not configured. Replace YOUR_SCRIPT_ID_HERE with your deployed Apps Script URL.');
 }
+
+// Must exactly match GOOGLE_CLIENT_ID in code.gs (same OAuth client, "Web
+// application" type, this page's origin added under Authorized JavaScript origins).
+const GOOGLE_CLIENT_ID = '54897471878-72tukkee6t8p3js811ireepf16p4hmq7.apps.googleusercontent.com';
 
 const ALL_TEAM_MEMBERS = [
   'Ayo T. Joshua','Shina Samson','Israel Idowu','Darlington','Chizaram',
@@ -1052,7 +1132,7 @@ function getExpectedTodayMembers() {
 }
 
 // Leader-only fields on Master Tasks — non-leaders cannot edit these
-const LEADER_ONLY_FIELDS = ['Deadline','Assigned To','Assigned_To_Email','Priority','Support Person','Business / Dept'];
+const LEADER_ONLY_FIELDS = ['Deadline','Assigned To','Assigned_To_Email','Priority','Support Person','Support_Person_Email','Business / Dept'];
 
 // ============================================================
 //  FORM SCHEMAS
@@ -1067,6 +1147,7 @@ const FORM_SCHEMAS = {
       {key:'Assigned To',label:'Assigned To',type:'select',options:['','Ayo T. Joshua','Shina Samson','Israel Idowu','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)'],required:true,leaderOnly:true},
       {key:'Assigned_To_Email',label:'Assignee Email',type:'email',placeholder:'name@rescuetap.org',leaderOnly:true},
       {key:'Support Person',label:'Support Person',type:'select',options:['','Ayo T. Joshua','Shina Samson','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)'],leaderOnly:true},
+      {key:'Support_Person_Email',label:'CC Email (Support Person)',type:'email',placeholder:'name@rescuetap.org',leaderOnly:true},
       {key:'Business / Dept',label:'Department',type:'select',options:['','COS','Partnerships','Marketing','Tech','Operations','Finance','HR'],leaderOnly:true},
       {section:'Priority & Timing'},
       {key:'Priority',label:'Priority',type:'select',options:['URGENT','HIGH','MEDIUM','LOW'],required:true,leaderOnly:true},
@@ -1077,6 +1158,7 @@ const FORM_SCHEMAS = {
       {section:'Notes'},
       {key:'Notes',label:'Notes',type:'textarea',placeholder:'Additional context...'},
       {key:'Proof Link',label:'Proof Link',type:'url',placeholder:'https://...'},
+      {key:'_drive_share',label:'Attach a Drive File',type:'drivelink'},
       {section:'Follow-Up'},
       {key:'Follow_Up_Hours',label:'Hourly Follow-Up Interval',type:'number',placeholder:'e.g. 1 or 2 (leave blank = off)',leaderOnly:true},
     ]
@@ -1165,6 +1247,23 @@ const TEAM_EMAILS = {
   'Mr Sam'                  : 'sam@rescuetap.org',
   'Joshua (Tech)'           : 'joshua.tech@rescuetap.org',
 };
+const ADD_MEMBER_OPTION = '+ Add New Member…';
+
+// Names/emails from the roster tab ('9. Team Members', populated via the
+// Add Member UI) are merged on top of the hardcoded TEAM_EMAILS map so newly
+// added people show up in every dropdown without editing this file again.
+function getTeamNames() {
+  const names = new Set(Object.keys(TEAM_EMAILS));
+  (appData.team || []).forEach(m => { if (m && m['Name']) names.add(String(m['Name']).trim()); });
+  return Array.from(names).sort((a, b) => a.localeCompare(b));
+}
+function getTeamEmail(name) {
+  if (!name) return '';
+  const fromRoster = (appData.team || []).find(m => String(m['Name'] || '').trim() === name);
+  if (fromRoster && fromRoster['Email']) return fromRoster['Email'];
+  return TEAM_EMAILS[name] || '';
+}
+
 let currentView = 'dashboard';
 let currentTab  = '1. Master Tasks';
 let editingRowId = null;
@@ -1225,8 +1324,60 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('sched-time').value = '10:00';
   updateScheduleType();
   updateLeaderUI();
-  loadData();
+
+  // Reads now require a verified session — if we already have one
+  // (leader token or a prior Google sign-in), go straight to data;
+  // otherwise show the login modal and wait.
+  initGoogleSignIn();
+  if (leaderToken || getTeamToken()) {
+    loadData();
+  } else {
+    document.getElementById('login-modal').classList.add('show');
+  }
 });
+
+// ============================================================
+//  GOOGLE SIGN-IN
+// ============================================================
+function initGoogleSignIn() {
+  if (GOOGLE_CLIENT_ID.indexOf('PASTE_') === 0) {
+    document.getElementById('google-signin-error').textContent =
+      'Google Sign-In not configured yet — see GOOGLE_CLIENT_ID in the code.';
+    return;
+  }
+  if (!window.google || !google.accounts || !google.accounts.id) {
+    // GIS script hasn't loaded yet (slow network) — retry shortly.
+    setTimeout(initGoogleSignIn, 300);
+    return;
+  }
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleGoogleCredential,
+  });
+  const target = document.getElementById('google-signin-btn');
+  if (target) {
+    target.innerHTML = '';
+    google.accounts.id.renderButton(target, { theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with' });
+  }
+}
+
+async function handleGoogleCredential(response) {
+  const errEl = document.getElementById('google-signin-error');
+  errEl.textContent = '';
+  try {
+    const res = await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'googleLogin', idToken: response.credential }) });
+    const r = await res.json();
+    if (r.error === 'no_match') { errEl.textContent = r.message || "That Google account isn't on the team roster yet."; return; }
+    if (r.error) { errEl.textContent = r.error; return; }
+    setTeamSession(r.token, r.name);
+    closeLoginModal();
+    updateChatIdentityLine();
+    refreshChatBadge();
+    showToast('Signed in as ' + r.name, 'success');
+    await loadData();
+    if (_pendingOpenChat) { _pendingOpenChat = false; openChatPanel(); }
+  } catch (e) { errEl.textContent = 'Network error — try again.'; }
+}
 
 // ============================================================
 //  NAVIGATION
@@ -1258,13 +1409,19 @@ async function loadData() {
   }
   hideCORSBanner();
   try {
-    const res = await fetch(SCRIPT_URL+'?action=read&_='+Date.now(), {redirect:'follow', cache:'no-store', mode:'cors'});
+    const res = await fetch(SCRIPT_URL+'?action=read&token='+encodeURIComponent(getIdentityToken()||'')+'&_='+Date.now(), {redirect:'follow', cache:'no-store', mode:'cors'});
     if (!res.ok) throw new Error('HTTP '+res.status);
     appData = await res.json();
+    if (appData.error === 'Login required.') {
+      clearTeamSession(); leaderToken=null; leaderName=null; sessionStorage.removeItem('nexus_leader_token'); sessionStorage.removeItem('nexus_leader_name');
+      document.getElementById('login-modal').classList.add('show');
+      return;
+    }
     if (appData.error) { showToast('Sheet error: '+appData.error,'error'); return; }
     renderView(currentView);
     updateNavBadges();
     checkMeetingNotifications();
+    refreshChatBadge();
   } catch(e) {
     const isCORS = e.message.includes('Failed to fetch') || e.message.includes('NetworkError') || e.message.includes('CORS') || e.message === 'Failed to fetch';
     if (isCORS) {
@@ -1311,7 +1468,7 @@ function hideCORSBanner() {
 async function testScriptURL() {
   showToast('Testing connection…','');
   try {
-    const res = await fetch(SCRIPT_URL+'?action=read&_='+Date.now(), {redirect:'follow',cache:'no-store'});
+    const res = await fetch(SCRIPT_URL+'?action=read&token='+encodeURIComponent(getIdentityToken()||'')+'&_='+Date.now(), {redirect:'follow',cache:'no-store'});
     if(res.ok) {
       const d = await res.json();
       if(d.error) showToast('Connected but sheet error: '+d.error,'error');
@@ -1373,6 +1530,7 @@ function isLeader() { const t=sessionStorage.getItem('nexus_leader_token'); retu
 function noDataRow(cols,msg) { return '<tr><td colspan="'+cols+'" style="color:var(--muted);text-align:center;padding:22px;font-size:12px">'+(msg||'No data. Press Sync.')+'</td></tr>'; }
 function escQ(s) { return String(s||'').replace(/'/g,'&#39;'); }
 function escAttr(s) { return String(s||'').replace(/"/g,'&quot;'); }
+function escHtml(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
 function updateTime() { document.getElementById('topbar-time').textContent = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}); }
 function toggleTheme() {
   const isLight = document.documentElement.getAttribute('data-theme')==='light';
@@ -1799,6 +1957,236 @@ function closeMyTasks() {
   document.getElementById('mytasks-panel').style.transform = 'translateX(100%)';
 }
 
+// ============================================================
+//  CHAT — identity, team channel, per-task threads, push
+// ============================================================
+
+// Real VAPID public key generated for this deployment. The matching private
+// key lives ONLY in the Vercel project's env vars (see api/send-push.js) —
+// never put the private key in this file or in Apps Script.
+const VAPID_PUBLIC_KEY = 'BHFmgTMYXgMWbuyaZ1x_gVSvkzD_WJyE2IVq6UwJv4KsGKKP38-_ePuRyGh3ce3Hmh6iLlqdK5YlvH9IZeg6UmI';
+
+let chatPollInterval = null;
+let _pendingOpenChat = false;
+
+// Chat identity is a real per-person login (PIN-protected), not a free-pick
+// name — the server resolves "who is this" from teamToken/leaderToken, it
+// never trusts a name the client sends. Session persists ~30 days (server-
+// enforced expiry), so people don't have to re-enter their PIN constantly.
+function getTeamToken()  { return localStorage.getItem('nexus_team_token'); }
+function getTeamName()   { return localStorage.getItem('nexus_team_name'); }
+function setTeamSession(token, name) { localStorage.setItem('nexus_team_token', token); localStorage.setItem('nexus_team_name', name); }
+function clearTeamSession() { localStorage.removeItem('nexus_team_token'); localStorage.removeItem('nexus_team_name'); }
+
+// Leaders are already authenticated via their own session — treat that as
+// identity too so they don't need a separate chat login.
+function getIdentity() { return leaderName || getTeamName() || null; }
+function getIdentityToken() { return leaderName ? leaderToken : getTeamToken(); }
+
+// Called whenever a chat/push request comes back with "Login required."
+// (token missing, expired, or revoked) — clears the stale session and asks
+// the person to log back in.
+function handleChatAuthError(r) {
+  if (r && r.error === 'Login required.' && !leaderName) {
+    clearTeamSession();
+    showToast('Chat session expired — please log in again', 'error');
+    updateChatIdentityLine();
+    return true;
+  }
+  return false;
+}
+
+// Chat now piggybacks on the same Google-verified session used for the
+// rest of the app (identity comes from resolveIdentity(token) server-side).
+// Since app boot already requires sign-in before any data loads, by the
+// time someone reaches chat they already have an identity — this just
+// covers the rare case where a session expired mid-visit.
+function promptIdentity(force) {
+  if (!force && getIdentity()) return;
+  document.getElementById('login-modal').classList.add('show');
+  initGoogleSignIn();
+}
+async function teamLogoutClick() {
+  const token = getIdentityToken();
+  if (leaderName) { showToast("You're logged in as a leader — sign out from the sidebar instead.", ''); return; }
+  clearTeamSession();
+  updateChatIdentityLine();
+  refreshChatBadge();
+  showToast('Logged out of chat', 'success');
+  if (token) fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'teamLogout', token }) }).catch(() => {});
+  document.getElementById('login-modal').classList.add('show');
+  initGoogleSignIn();
+}
+function updateChatIdentityLine() {
+  const el = document.getElementById('chat-identity-line');
+  if (el) el.textContent = getIdentity() ? 'Logged in as ' + getIdentity() : 'Not logged in';
+}
+
+// ── Team chat panel ─────────────────────────────────────────
+function openChatPanel() {
+  if (!getIdentity()) { _pendingOpenChat = true; promptIdentity(true); return; }
+  document.getElementById('chat-overlay').style.display = 'block';
+  document.getElementById('chat-panel').style.transform = 'translateX(0)';
+  updateChatIdentityLine();
+  loadTeamChat(true);
+  markChatReadRemote('team');
+  refreshNotifyButtonState();
+  startChatPolling();
+}
+function closeChatPanel() {
+  document.getElementById('chat-overlay').style.display = 'none';
+  document.getElementById('chat-panel').style.transform = 'translateX(100%)';
+  stopChatPolling();
+}
+function startChatPolling() {
+  stopChatPolling();
+  chatPollInterval = setInterval(() => { loadTeamChat(false); refreshChatBadge(); }, 12000);
+}
+function stopChatPolling() { if (chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval = null; } }
+
+async function loadTeamChat(scrollToBottom) {
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getChatMessages&channel=team&token=' + encodeURIComponent(getIdentityToken() || '') + '&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' });
+    const r = await res.json();
+    if (handleChatAuthError(r)) return;
+    renderChatMessages(document.getElementById('chat-messages'), r.messages || []);
+    if (scrollToBottom) scrollChatToBottom('chat-messages');
+  } catch (e) { /* silent — polling will retry */ }
+}
+
+function renderChatMessages(container, messages) {
+  const me = getIdentity();
+  if (!messages.length) { container.innerHTML = '<div class="chat-empty">No messages yet. Say hi 👋</div>'; return; }
+  container.innerHTML = messages.map(m => {
+    const mine = m.Author === me;
+    const time = new Date(m.Timestamp).toLocaleString('en-NG', { hour: 'numeric', minute: '2-digit', day: 'numeric', month: 'short' });
+    return '<div class="chat-msg' + (mine ? ' mine' : '') + '"><div class="cm-author">' + escHtml(m.Author) + '</div><div>' + escHtml(m.Message) + '</div><div class="cm-time">' + time + '</div></div>';
+  }).join('');
+}
+function scrollChatToBottom(id) { const el = document.getElementById(id); if (el) el.scrollTop = el.scrollHeight; }
+
+async function sendTeamChatMessage() {
+  if (!getIdentity()) { promptIdentity(true); return; }
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  try {
+    const res = await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'sendChatMessage', token: getIdentityToken(), data: { Channel: 'team', Message: msg } }) });
+    const r = await res.json();
+    if (handleChatAuthError(r)) return;
+    if (r.error) { showToast(r.error, 'error'); return; }
+    loadTeamChat(true);
+  } catch (e) { showToast('Failed to send message', 'error'); }
+}
+
+// ── Unread badge ─────────────────────────────────────────────
+async function refreshChatBadge() {
+  const badge = document.getElementById('chat-badge');
+  if (!badge) return;
+  if (!getIdentity()) { badge.style.display = 'none'; return; }
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getChatSummary&token=' + encodeURIComponent(getIdentityToken() || '') + '&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' });
+    const r = await res.json();
+    const total = (r.team || 0) + (r.totalTasks || 0);
+    if (total > 0) { badge.textContent = total > 99 ? '99+' : total; badge.style.display = 'flex'; }
+    else { badge.style.display = 'none'; }
+    window._chatTaskUnread = r.tasks || {};
+  } catch (e) { /* silent */ }
+}
+async function markChatReadRemote(channel) {
+  if (!getIdentity()) return;
+  try {
+    const res = await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'markChatRead', token: getIdentityToken(), channel: channel }) });
+    const r = await res.json();
+    if (handleChatAuthError(r)) return;
+    refreshChatBadge();
+  } catch (e) { /* silent */ }
+}
+
+// ── Per-task discussion thread (injected into the task drawer) ──
+function taskThreadHTML(taskId) {
+  return '<div id="task-thread-wrap">'
+    + '<div style="font-size:11px;font-weight:700;font-family:\'Space Mono\',monospace;color:var(--muted);margin-bottom:8px">💬 DISCUSSION</div>'
+    + '<div id="task-thread-msgs"><div class="chat-empty">Loading…</div></div>'
+    + '<div id="task-thread-input-row">'
+    + '<textarea class="form-input" id="task-thread-input" rows="1" placeholder="Comment on this task…" style="resize:none;flex:1" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendTaskChatMessage(\'' + escQ(taskId) + '\');}"></textarea>'
+    + '<button type="button" class="btn-secondary" onclick="sendTaskChatMessage(\'' + escQ(taskId) + '\')">Send</button>'
+    + '</div></div>';
+}
+async function loadTaskThread(taskId) {
+  const wrap = document.getElementById('task-thread-msgs');
+  if (!wrap) return;
+  if (!getIdentity()) { wrap.innerHTML = '<div class="chat-empty">Log in (💬 Chat) to join the discussion.</div>'; return; }
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getChatMessages&channel=task&taskId=' + encodeURIComponent(taskId) + '&token=' + encodeURIComponent(getIdentityToken() || '') + '&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' });
+    const r = await res.json();
+    if (handleChatAuthError(r)) { wrap.innerHTML = '<div class="chat-empty">Log in (💬 Chat) to join the discussion.</div>'; return; }
+    renderChatMessages(wrap, r.messages || []);
+    scrollChatToBottom('task-thread-msgs');
+    markChatReadRemote(taskId);
+  } catch (e) { wrap.innerHTML = '<div class="chat-empty">Couldn\'t load discussion.</div>'; }
+}
+async function sendTaskChatMessage(taskId) {
+  if (!getIdentity()) { promptIdentity(true); return; }
+  const input = document.getElementById('task-thread-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  try {
+    const res = await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'sendChatMessage', token: getIdentityToken(), data: { Channel: 'task', TaskID: taskId, Message: msg } }) });
+    const r = await res.json();
+    if (handleChatAuthError(r)) return;
+    if (r.error) { showToast(r.error, 'error'); return; }
+    loadTaskThread(taskId);
+  } catch (e) { showToast('Failed to send message', 'error'); }
+}
+
+// ── Web push subscription (Vercel handles the actual encrypted send) ──
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+async function refreshNotifyButtonState() {
+  const btn = document.getElementById('chat-notify-btn');
+  if (!btn) return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) { btn.style.display = 'none'; return; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    btn.textContent = sub ? '🔕 Disable notifications' : '🔔 Enable notifications';
+  } catch (e) { /* silent */ }
+}
+async function toggleChatNotifications() {
+  const btn = document.getElementById('chat-notify-btn');
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) { showToast('Push notifications not supported in this browser', 'error'); return; }
+  if (!getIdentity()) { promptIdentity(true); return; }
+  const token = getIdentityToken();
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) {
+      await existing.unsubscribe();
+      const r = await (await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'removePushSubscription', token }) })).json();
+      handleChatAuthError(r);
+      btn.textContent = '🔔 Enable notifications';
+      showToast('Notifications turned off', 'success');
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { showToast('Notification permission denied', 'error'); return; }
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
+    const r = await (await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'savePushSubscription', token, subscription: sub.toJSON() }) })).json();
+    if (handleChatAuthError(r)) return;
+    btn.textContent = '🔕 Disable notifications';
+    showToast('Notifications enabled ✓', 'success');
+  } catch (e) { showToast('Could not enable notifications: ' + e.message, 'error'); }
+}
+
 function setMyTaskFilter(filter, btn) {
   myTasksFilter = filter;
   document.querySelectorAll('.mytasks-filter').forEach(b => b.classList.remove('active'));
@@ -1877,7 +2265,7 @@ function renderMyTasks() {
 async function quickStatusUpdate(taskId, newStatus, who, selectEl) {
   selectEl.disabled = true;
   try {
-    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({action:'updateTaskStatus', id:taskId, status:newStatus, user:who})});
+    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({action:'updateTaskStatus', id:taskId, status:newStatus, token:getIdentityToken()})});
     const r = await res.json();
     if (r.error) { showToast(r.error, 'error'); selectEl.disabled=false; return; }
     showToast('Status → '+newStatus, 'success');
@@ -1921,6 +2309,7 @@ async function submitLogin() {
     sessionStorage.setItem('nexus_leader_name',leaderName);
     document.getElementById('login-pass').value='';
     closeLoginModal(); updateLeaderUI(); showToast('Welcome '+leaderName,'success');
+    await loadData();
   } catch(e){
     const isCORS = e.message.includes('Failed to fetch') || e.message.includes('NetworkError');
     document.getElementById('login-error').textContent = isCORS ? 'CORS blocked — open file directly, not via Live Server' : 'Network error. Try again.';
@@ -1933,6 +2322,7 @@ async function logoutLeader() {
   leaderToken=null; leaderName=null;
   sessionStorage.removeItem('nexus_leader_token'); sessionStorage.removeItem('nexus_leader_name');
   updateLeaderUI(); showToast('Signed out','success');
+  if (!getTeamToken()) { document.getElementById('login-modal').classList.add('show'); initGoogleSignIn(); }
 }
 
 function togglePwVisibility(inputId, btn) {
@@ -2033,7 +2423,8 @@ function applyDraft(draft) {
     const el = body.querySelector('.form-input[name="' + name.replace(/"/g, '\\"') + '"]');
     if (!el || el.disabled) return;
     el.value = draft.data[name];
-    if (el.tagName === 'SELECT' && el.name === 'Assigned To') autoFillEmail(el.value);
+    if (el.tagName === 'SELECT' && el.name === 'Assigned To')    autoFillEmailField(el.value, 'Assigned_To_Email');
+    if (el.tagName === 'SELECT' && el.name === 'Support Person') autoFillEmailField(el.value, 'Support_Person_Email');
     const dpWrap = el.closest('.datepicker-wrap');
     if (dpWrap) { const disp = dpWrap.querySelector('.dp-val'); if (disp) disp.textContent = draft.data[name] || 'Select date'; }
   });
@@ -2104,7 +2495,13 @@ function generateForm() {
       // Always resolve from map if blank — even when locked — so disabled field has the value in HTML
       if(!resolvedVal) {
         const assignedTo = rowData ? (rowData['Assigned To']||'') : '';
-        resolvedVal = TEAM_EMAILS[assignedTo] || '';
+        resolvedVal = getTeamEmail(assignedTo);
+      }
+    }
+    if(field.key==='Support_Person_Email') {
+      if(!resolvedVal) {
+        const supportPerson = rowData ? (rowData['Support Person']||'') : '';
+        resolvedVal = getTeamEmail(supportPerson);
       }
     }
     const req=field.required?'<span style="color:var(--danger)">*</span>':'';
@@ -2112,8 +2509,15 @@ function generateForm() {
     const dis=(locked||immutable)?' disabled':'';
     const ro=field.readonly?' readonly style="opacity:0.5;cursor:not-allowed"':'';
     if(field.type==='select'){
-      const opts=field.options.map(o=>'<option value="'+o+'" '+(o==resolvedVal?'selected':'')+'>'+o+'</option>').join('');
-      const onChange = field.key==='Assigned To' ? ' onchange="autoFillEmail(this.value)"' : '';
+      const isTeamField = field.key==='Assigned To' || field.key==='Support Person';
+      let optionList = field.options;
+      if(isTeamField){
+        optionList = [''].concat(getTeamNames());
+        if(isLeader()) optionList = optionList.concat([ADD_MEMBER_OPTION]);
+      }
+      const opts=optionList.map(o=>'<option value="'+o+'" '+(o==resolvedVal?'selected':'')+'>'+(o||'')+'</option>').join('');
+      const onChange = field.key==='Assigned To' ? ' onchange="handleTeamFieldChange(this,\'Assigned_To_Email\')"'
+        : field.key==='Support Person' ? ' onchange="handleTeamFieldChange(this,\'Support_Person_Email\')"' : '';
       input='<select class="form-input" name="'+escAttr(field.key)+'"'+dis+onChange+'>'+opts+'</select>';
     } else if(field.type==='textarea'){
       input='<textarea class="form-input" name="'+escAttr(field.key)+'" placeholder="'+(field.placeholder||'')+'"'+dis+ro+'>'+resolvedVal+'</textarea>';
@@ -2127,6 +2531,11 @@ function generateForm() {
         +'</div>'
         +'<input type="hidden" name="'+escAttr(field.key)+'" value="'+escAttr(resolvedVal)+'"'+(dpLocked?' disabled':'')+'>'
         +'</div>';
+    } else if(field.type==='drivelink'){
+      input='<div style="display:flex;gap:6px">'
+        +'<input type="text" class="form-input" id="drive-link-input" placeholder="Paste a Google Drive link or file ID" style="flex:1">'
+        +'<button type="button" class="btn-secondary" style="white-space:nowrap" onclick="requestShareLink()">Get Link</button>'
+        +'</div><div id="drive-link-result" style="font-size:11px;color:var(--muted);margin-top:6px"></div>';
     } else {
       input='<input type="'+field.type+'" class="form-input" name="'+escAttr(field.key)+'" value="'+escAttr(resolvedVal)+'" placeholder="'+(field.placeholder||'')+'"'+dis+ro+'>';
     }
@@ -2135,9 +2544,16 @@ function generateForm() {
   });
   // Init all date pickers after DOM is updated
   body.querySelectorAll('.datepicker-wrap').forEach(w=>initDatePicker(w));
-  // Auto-fill email if Assigned To already has a value (e.g. editing existing row)
+  // Auto-fill emails if Assigned To / Support Person already have a value (e.g. editing existing row)
   const assignedToEl = body.querySelector('.form-input[name="Assigned To"]');
-  if(assignedToEl && assignedToEl.value) autoFillEmail(assignedToEl.value);
+  if(assignedToEl && assignedToEl.value) autoFillEmailField(assignedToEl.value, 'Assigned_To_Email');
+  const supportPersonEl = body.querySelector('.form-input[name="Support Person"]');
+  if(supportPersonEl && supportPersonEl.value) autoFillEmailField(supportPersonEl.value, 'Support_Person_Email');
+  // Per-task discussion thread — only for existing Master Tasks rows
+  if (currentTab === '1. Master Tasks' && editingRowId) {
+    body.insertAdjacentHTML('beforeend', taskThreadHTML(editingRowId));
+    loadTaskThread(editingRowId);
+  }
   restoreDraftIfAny();
 }
 
@@ -2161,17 +2577,105 @@ function discardDraft() {
   showToast('Draft discarded', 'success');
 }
 
-function autoFillEmail(name) {
-  const emailField = document.querySelector('.form-input[name="Assigned_To_Email"]');
+function autoFillEmailField(name, fieldName) {
+  const emailField = document.querySelector('.form-input[name="'+fieldName+'"]');
   if (!emailField || emailField.disabled) return;
-  const mapped = TEAM_EMAILS[name] || '';
+  const mapped = getTeamEmail(name);
   const currentVal = emailField.value.trim();
-  const isKnownEmail = Object.values(TEAM_EMAILS).includes(currentVal);
+  const knownEmails = getTeamNames().map(getTeamEmail).filter(Boolean);
+  const isKnownEmail = knownEmails.includes(currentVal);
   // Always overwrite if: field is empty, OR current value is a known mapped email (wasn't custom-typed)
   // Preserve only if user typed a custom email not in the map
   if (!currentVal || isKnownEmail) {
     emailField.value = mapped; // sets to email or clears if name blank
   }
+}
+// Backward-compatible alias (kept in case anything else still calls it by name)
+function autoFillEmail(name) { autoFillEmailField(name, 'Assigned_To_Email'); }
+
+// Handles both the normal "pick a name" case and the "+ Add New Member…" sentinel
+// on the Assigned To / Support Person dropdowns.
+function handleTeamFieldChange(selectEl, emailFieldName) {
+  if (selectEl.value === ADD_MEMBER_OPTION) {
+    selectEl.value = '';
+    openAddMemberModal(selectEl.name, emailFieldName);
+    return;
+  }
+  autoFillEmailField(selectEl.value, emailFieldName);
+}
+
+// ─── Add Team Member modal ─────────────────────────────────────
+let addMemberContext = null; // { selectFieldName, emailFieldName } — which dropdown triggered it
+function openAddMemberModal(selectFieldName, emailFieldName) {
+  if (!isLeader()) { showToast('Leader login required to add a team member', 'error'); return; }
+  addMemberContext = { selectFieldName, emailFieldName };
+  document.getElementById('am-name').value = '';
+  document.getElementById('am-email').value = '';
+  document.getElementById('am-role').value = '';
+  document.getElementById('am-dept').value = '';
+  document.getElementById('am-error').textContent = '';
+  document.getElementById('add-member-modal').classList.add('show');
+}
+function closeAddMemberModal() {
+  document.getElementById('add-member-modal').classList.remove('show');
+  addMemberContext = null;
+}
+// ─── Drive share links (no attachments, no email quota) ───────
+async function requestShareLink() {
+  const input = document.getElementById('drive-link-input');
+  const resultEl = document.getElementById('drive-link-result');
+  const raw = input ? input.value.trim() : '';
+  if (!raw) { resultEl.textContent = 'Paste a Drive link or file ID first.'; resultEl.style.color = 'var(--danger)'; return; }
+  resultEl.textContent = 'Getting link…'; resultEl.style.color = 'var(--muted)';
+  try {
+    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({action:'getShareLink', url:raw})});
+    const r = await res.json();
+    if (r.error) { resultEl.textContent = r.error; resultEl.style.color = 'var(--danger)'; return; }
+    const proofEl = document.querySelector('.form-input[name="Proof Link"]');
+    if (proofEl && !proofEl.disabled) proofEl.value = r.url;
+    resultEl.innerHTML = '✓ "'+r.name+'" — link copied into Proof Link (<a href="'+escAttr(r.url)+'" target="_blank" style="color:var(--accent2)">open</a>)';
+    resultEl.style.color = 'var(--accent2)';
+  } catch(e) {
+    resultEl.textContent = 'Network error — could not get link.'; resultEl.style.color = 'var(--danger)';
+  }
+}
+
+async function submitAddMember() {
+  const name  = document.getElementById('am-name').value.trim();
+  const email = document.getElementById('am-email').value.trim();
+  const role  = document.getElementById('am-role').value.trim();
+  const dept  = document.getElementById('am-dept').value.trim();
+  const errEl = document.getElementById('am-error');
+  errEl.textContent = '';
+  if (!name)  { errEl.textContent = 'Name is required.'; return; }
+  if (!email) { errEl.textContent = 'Email is required.'; return; }
+  const btn = document.getElementById('am-btn');
+  const origText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Adding…';
+  try {
+    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({
+      action:'addTeamMember', token:leaderToken||'',
+      data:{ Name:name, Email:email, Role:role, Department:dept }
+    })});
+    const r = await res.json();
+    if (r.error) { errEl.textContent = r.error; btn.disabled = false; btn.textContent = origText; return; }
+    // Reflect locally right away so the dropdown includes it without a full reload
+    appData.team = appData.team || [];
+    appData.team.push({ Name:name, Email:email, Role:role, Department:dept });
+    showToast(name + ' added to the team', 'success');
+    const ctx = addMemberContext;
+    closeAddMemberModal();
+    generateForm();
+    // Re-select the newly added person in whichever dropdown triggered this
+    if (ctx) {
+      const selEl = document.querySelector('.form-input[name="'+ctx.selectFieldName+'"]');
+      if (selEl) { selEl.value = name; handleTeamFieldChange(selEl, ctx.emailFieldName); }
+    }
+    loadData(); // background refresh to stay in sync with the sheet
+  } catch(e) {
+    errEl.textContent = 'Network error — could not add member.';
+  }
+  btn.disabled = false; btn.textContent = origText;
 }
 
 async function submitForm() {
@@ -2197,7 +2701,14 @@ async function submitForm() {
         // Read email from DOM directly (works even if disabled), fall back to map
         const emailEl=body.querySelector('[name="Assigned_To_Email"]');  // no :not([disabled])
         const emailVal=(emailEl?emailEl.value.trim():'')||(formData['Assigned_To_Email']||'');
-        formData['Assigned_To_Email'] = emailVal || TEAM_EMAILS[assignedTo] || '';
+        formData['Assigned_To_Email'] = emailVal || getTeamEmail(assignedTo);
+
+        const supportEl=body.querySelector('.form-input[name="Support Person"]');
+        const supportPerson=supportEl?supportEl.value:(formData['Support Person']||'');
+        if(supportPerson) formData['Support Person']=supportPerson;
+        const ccEmailEl=body.querySelector('[name="Support_Person_Email"]');  // no :not([disabled])
+        const ccEmailVal=(ccEmailEl?ccEmailEl.value.trim():'')||(formData['Support_Person_Email']||'');
+        formData['Support_Person_Email'] = ccEmailVal || getTeamEmail(supportPerson);
       }
       const missing=schema.fields.filter(f=>f.required&&!f.leaderOnly&&!formData[f.key]).map(f=>f.label);
       if(missing.length){showToast('Required: '+missing.join(', '),'error');return;}
