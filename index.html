@@ -2,8 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#080810">
+  <link rel="manifest" href="manifest.json">
+  <!-- iOS home-screen / standalone support (Safari ignores manifest.json display mode) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NEXUS">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <title>NEXUS · RescueTap Operations</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -60,7 +66,7 @@
 
     /* MAIN */
     #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-    #topbar { height: var(--topbar-h); background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 10px; gap: 6px; flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
+    #topbar { min-height: var(--topbar-h); background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: env(safe-area-inset-top) 10px 0; padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); gap: 6px; flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
     #topbar::-webkit-scrollbar { display: none; }
     #menu-btn { display: none; background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px; }
     #menu-btn svg { width: 20px; height: 20px; }
@@ -249,13 +255,13 @@
     /* DRAWER */
     #drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 60; display: none; backdrop-filter: blur(2px); }
     #drawer-overlay.open { display: block; }
-    #drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 440px; background: var(--surface); border-left: 1px solid var(--border); z-index: 70; transform: translateX(100%); transition: transform 0.3s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; }
+    #drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100vw); max-width: 100vw; background: var(--surface); border-left: 1px solid var(--border); z-index: 70; transform: translateX(100%); transition: transform 0.3s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; }
     #drawer.open { transform: translateX(0); }
-    .drawer-head { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    .drawer-head h3 { font-size: 16px; font-weight: 700; }
+    .drawer-head { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .drawer-head h3 { font-size: 16px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .drawer-tab-hint { font-size: 10px; font-family: "Space Mono", monospace; color: var(--muted); margin-top: 2px; }
     .drawer-body { flex: 1; padding: 18px; overflow-y: auto; }
-    .drawer-foot { padding: 14px 18px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+    .drawer-foot { padding: 14px 18px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 10px; }
     .form-group { margin-bottom: 13px; }
     .form-group label { display: block; font-size: 10px; font-weight: 700; color: var(--muted); margin-bottom: 5px; font-family: "Space Mono", monospace; letter-spacing: 0.5px; }
     .form-group label .required { color: var(--danger); margin-left: 2px; }
@@ -346,7 +352,7 @@
     .launch-btns-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
 
     /* VISUAL CALENDAR */
-    .cal-wrap { max-width: 720px; }
+    .cal-wrap { width: 100%; }
     .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
     .cal-nav { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; width: 34px; height: 34px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.15s; }
     .cal-nav:hover { background: var(--surface3); border-color: var(--accent); color: var(--accent); }
@@ -383,10 +389,13 @@
     /* LOGIN MODAL */
     #login-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
     #login-modal.show { display: flex; }
+    #change-password-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    #change-password-modal.show { display: flex; }
     .login-box { background: var(--surface); border: 1px solid rgba(108,99,255,0.3); border-radius: 16px; padding: 34px; width: 340px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
     .login-box h2 { font-size: 20px; font-weight: 800; margin-bottom: 4px; background: linear-gradient(135deg,#6c63ff,#00e5b0); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .login-box p { font-size: 11px; color: var(--muted); font-family: "Space Mono", monospace; margin-bottom: 22px; }
     #login-error { font-size: 11px; color: var(--danger); font-family: "Space Mono", monospace; margin-bottom: 10px; min-height: 16px; }
+    #cp-error { font-size: 11px; color: var(--danger); font-family: "Space Mono", monospace; margin-bottom: 10px; min-height: 16px; }
 
     /* TOAST */
     #toast { position: fixed; bottom: 22px; right: 22px; background: var(--surface3); border: 1px solid var(--border); border-radius: 8px; padding: 11px 16px; font-size: 13px; font-weight: 600; z-index: 999; transform: translateY(80px); opacity: 0; transition: all 0.3s; pointer-events: none; max-width: 300px; }
@@ -412,7 +421,7 @@
       #menu-btn { display: flex; }
       #content { padding: 12px; }
       .stats-grid { grid-template-columns: repeat(2,1fr); gap: 10px; }
-      #drawer { width: 100%; }
+      .drawer-body, .drawer-foot { padding-left: 14px; padding-right: 14px; }
       .form-row { grid-template-columns: 1fr; }
       .launch-btns-grid { grid-template-columns: 1fr; }
       /* topbar stripped to 4 items only */
@@ -431,6 +440,37 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
     .pb-10 { padding-bottom: 40px; }
+
+    /* ── CALENDAR: full-screen on desktop ───────────────────── */
+    @media (min-width: 701px) {
+      /* panel itself becomes a flex column filling the viewport below topbar + tabs */
+      #mtg-panel-calendar.active {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - var(--topbar-h) - 110px);
+      }
+      /* cal-wrap grows to fill the panel */
+      #mtg-panel-calendar.active .cal-wrap {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      /* grid rows share space equally */
+      #mtg-panel-calendar.active #cal-grid {
+        flex: 1;
+        grid-auto-rows: 1fr;
+        min-height: 0;
+      }
+      /* cells no longer need a fixed min-height — rows define the height */
+      #mtg-panel-calendar.active .cal-cell {
+        min-height: 0;
+      }
+      /* show a few more events per cell before "+N more" */
+      #mtg-panel-calendar.active .cal-event {
+        font-size: 11px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -458,6 +498,29 @@
     <div id="login-error"></div>
     <button class="btn-primary" id="login-btn" style="width:100%;margin-bottom:10px" onclick="submitLogin()">Authenticate</button>
     <button class="btn-secondary" style="width:100%;font-size:12px" onclick="closeLoginModal()">Cancel — continue as team member</button>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div id="change-password-modal">
+  <div class="login-box">
+    <h2>Change Passphrase</h2>
+    <p>Update your leader passphrase</p>
+    <div class="form-group">
+      <label>Current Passphrase</label>
+      <input type="password" class="form-input" id="cp-current" placeholder="Current passphrase" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>New Passphrase</label>
+      <input type="password" class="form-input" id="cp-new" placeholder="New passphrase (min 6 characters)" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Confirm New Passphrase</label>
+      <input type="password" class="form-input" id="cp-confirm" placeholder="Retype new passphrase" autocomplete="off" onkeydown="if(event.key==='Enter')submitChangePassword()">
+    </div>
+    <div id="cp-error"></div>
+    <button class="btn-primary" id="cp-btn" style="width:100%;margin-bottom:10px" onclick="submitChangePassword()">Update Passphrase</button>
+    <button class="btn-secondary" style="width:100%;font-size:12px" onclick="closeChangePasswordModal()">Cancel</button>
   </div>
 </div>
 
@@ -558,10 +621,6 @@
         Marketing
       </a>
       <div class="nav-section">Ops</div>
-      <a class="nav-item" id="nav-team-item" data-view="team" style="display:none">
-        <svg fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
-        Team
-      </a>
       <a class="nav-item" data-view="eod">
         <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm11 1H6v8l4-2 4 2V6z" clip-rule="evenodd"/></svg>
         EOD Report
@@ -586,10 +645,15 @@
         <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
         Automation
       </a>
+      <a class="nav-item" id="nav-team-item" data-view="team" style="display:none">
+        <svg fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
+        Team Directory
+      </a>
     </nav>
     <div id="leader-badge">
       <div class="lb-name" id="lb-name-text">Leader</div>
       <div class="lb-role">Session Active</div>
+      <span class="lb-logout" onclick="openChangePasswordModal()" style="color:var(--accent);margin-right:10px">Change password</span>
       <span class="lb-logout" onclick="logoutLeader()">Sign out x</span>
     </div>
     <!-- Mobile-only utility strip in sidebar -->
@@ -1154,7 +1218,7 @@ function loadView(name) {
   currentView = name;
   document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.view===name));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id===('view-'+name)));
-  const titles = {dashboard:'KPI Dashboard',tasks:'Master Tasks',cos:'COS',partners:'Partnerships',org:'Org Database',kpi:'Activity Log',marketing:'Marketing',eod:'EOD Report',meetings:'Meetings',followup:'Follow-Up Tracker',failsafe:'Failsafe Alerts',automation:'Automation'};
+  const titles = {dashboard:'KPI Dashboard',tasks:'Master Tasks',cos:'COS',partners:'Partnerships',org:'Org Database',kpi:'Activity Log',marketing:'Marketing',eod:'EOD Report',meetings:'Meetings',followup:'Follow-Up Tracker',failsafe:'Failsafe Alerts',automation:'Automation',team:'Team Directory'};
   document.getElementById('topbar-title').textContent = titles[name]||name;
   const lbl = ADD_BTN_LABELS[name];
   const addBtn = document.getElementById('add-btn');
@@ -1853,6 +1917,41 @@ async function logoutLeader() {
   updateLeaderUI(); showToast('Signed out','success');
 }
 
+function openChangePasswordModal() {
+  if(!isLeader()){showToast('Leader login required','error');return;}
+  document.getElementById('cp-current').value='';
+  document.getElementById('cp-new').value='';
+  document.getElementById('cp-confirm').value='';
+  document.getElementById('cp-error').textContent='';
+  document.getElementById('change-password-modal').classList.add('show');
+}
+function closeChangePasswordModal() { document.getElementById('change-password-modal').classList.remove('show'); }
+
+async function submitChangePassword() {
+  const current=document.getElementById('cp-current').value;
+  const next=document.getElementById('cp-new').value;
+  const confirm=document.getElementById('cp-confirm').value;
+  const errEl=document.getElementById('cp-error');
+  errEl.textContent='';
+  if(!current||!next||!confirm){errEl.textContent='All fields are required.';return;}
+  if(next.length<6){errEl.textContent='New passphrase must be at least 6 characters.';return;}
+  if(next!==confirm){errEl.textContent='New passphrase and confirmation do not match.';return;}
+  const btn=document.getElementById('cp-btn');
+  const origText=btn.textContent;
+  btn.disabled=true; btn.textContent='Updating…';
+  try {
+    const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify({action:'changeLeaderPassword',token:leaderToken,currentPassphrase:current,newPassphrase:next})});
+    const r=await res.json();
+    if(r.error){errEl.textContent=r.error;btn.disabled=false;btn.textContent=origText;return;}
+    closeChangePasswordModal();
+    showToast('Passphrase updated — use it next time you log in','success');
+  } catch(e){
+    const isCORS = e.message.includes('Failed to fetch') || e.message.includes('NetworkError');
+    errEl.textContent = isCORS ? 'CORS blocked — open file directly, not via Live Server' : 'Network error. Try again.';
+  }
+  btn.disabled=false; btn.textContent=origText;
+}
+
 function updateLeaderUI() {
   const show=isLeader();
   document.getElementById('leader-badge').classList.toggle('show',show);
@@ -1871,6 +1970,64 @@ function updateLeaderUI() {
 // ============================================================
 //  DRAWER
 // ============================================================
+// ============================================================
+//  DRAWER DRAFT CACHE — survives accidental close/refresh
+// ============================================================
+function draftKey(tab, rowId) { return 'nexus_draft::' + tab + '::' + (rowId || 'new'); }
+
+function saveDraft() {
+  try {
+    const body = document.getElementById('drawer-body');
+    if (!body) return;
+    const data = {};
+    body.querySelectorAll('.form-input').forEach(el => { if (el.name) data[el.name] = el.value; });
+    const hasContent = Object.values(data).some(v => v && String(v).trim());
+    if (!hasContent) { clearDraft(currentTab, editingRowId); return; }
+    localStorage.setItem(draftKey(currentTab, editingRowId), JSON.stringify({ data, isBatchMode, savedAt: Date.now() }));
+  } catch (e) { /* storage unavailable/full — fail silently */ }
+}
+
+function loadDraft(tab, rowId) {
+  try {
+    const raw = localStorage.getItem(draftKey(tab, rowId));
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+function clearDraft(tab, rowId) {
+  try { localStorage.removeItem(draftKey(tab, rowId)); } catch (e) { /* ignore */ }
+}
+
+function applyDraft(draft) {
+  if (!draft || !draft.data) return;
+  const body = document.getElementById('drawer-body');
+  if (!body) return;
+  Object.keys(draft.data).forEach(name => {
+    const el = body.querySelector('.form-input[name="' + name.replace(/"/g, '\\"') + '"]');
+    if (!el || el.disabled) return;
+    el.value = draft.data[name];
+    if (el.tagName === 'SELECT' && el.name === 'Assigned To') autoFillEmail(el.value);
+    const dpWrap = el.closest('.datepicker-wrap');
+    if (dpWrap) { const disp = dpWrap.querySelector('.dp-val'); if (disp) disp.textContent = draft.data[name] || 'Select date'; }
+  });
+}
+
+let draftSaveTimer = null;
+document.addEventListener('input', function(e) {
+  if (!e.target.closest || !e.target.closest('#drawer-body')) return;
+  clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(saveDraft, 400);
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('drawer')?.classList.contains('open')) closeDrawer();
+});
+
+// Extra safety net: catches accidental tab close / refresh / navigation while drawer is open
+window.addEventListener('beforeunload', function() {
+  if (document.getElementById('drawer')?.classList.contains('open')) saveDraft();
+});
+
 function openDrawer(tab, rowId) {
   if(!tab) tab=currentTab;
   currentTab=tab; editingRowId=rowId||null; isBatchMode=false;
@@ -1888,7 +2045,11 @@ function openDrawer(tab, rowId) {
   document.getElementById('drawer-overlay').classList.add('open');
   document.getElementById('drawer').classList.add('open');
 }
-function closeDrawer() { document.getElementById('drawer-overlay').classList.remove('open'); document.getElementById('drawer').classList.remove('open'); }
+function closeDrawer(discard) {
+  if (!discard) saveDraft();
+  document.getElementById('drawer-overlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
 function toggleBatchMode() { isBatchMode=!isBatchMode; document.getElementById('btn-batch').textContent=isBatchMode?'Single Mode':'Batch Mode'; generateForm(); }
 
 function generateForm() {
@@ -1898,6 +2059,7 @@ function generateForm() {
   if(isBatchMode){
     const headers=schema.fields.filter(f=>!f.section).map(f=>f.key);
     body.innerHTML='<div style="background:var(--bg);border:1px dashed rgba(108,99,255,0.3);border-radius:8px;padding:14px;margin-bottom:14px"><p style="font-size:12px;margin-bottom:8px">One row per line, comma-separated:</p><pre style="font-size:10px;color:var(--muted)">'+headers.join(', ')+'</pre></div><div class="form-group"><label>Batch Data</label><textarea class="form-input" name="batch" style="min-height:200px" placeholder="Row 1 data..."></textarea></div>';
+    restoreDraftIfAny();
     return;
   }
   let rowData=null;
@@ -1949,6 +2111,27 @@ function generateForm() {
   // Auto-fill email if Assigned To already has a value (e.g. editing existing row)
   const assignedToEl = body.querySelector('.form-input[name="Assigned To"]');
   if(assignedToEl && assignedToEl.value) autoFillEmail(assignedToEl.value);
+  restoreDraftIfAny();
+}
+
+function restoreDraftIfAny() {
+  const draft = loadDraft(currentTab, editingRowId);
+  if (!draft) return;
+  applyDraft(draft);
+  const body = document.getElementById('drawer-body');
+  if (body && !body.querySelector('.draft-restored-note')) {
+    const note = document.createElement('div');
+    note.className = 'draft-restored-note';
+    note.style.cssText = 'background:rgba(0,212,160,0.1);border:1px solid rgba(0,212,160,0.25);color:var(--accent2);border-radius:6px;padding:8px 12px;font-size:11px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px';
+    note.innerHTML = '<span>Restored unsaved draft from earlier</span><button type="button" style="background:none;border:1px solid rgba(0,212,160,0.4);color:var(--accent2);border-radius:4px;font-size:10px;padding:2px 8px;cursor:pointer" onclick="discardDraft()">Discard</button>';
+    body.prepend(note);
+  }
+}
+
+function discardDraft() {
+  clearDraft(currentTab, editingRowId);
+  generateForm();
+  showToast('Draft discarded', 'success');
 }
 
 function autoFillEmail(name) {
@@ -1999,7 +2182,7 @@ async function submitForm() {
       const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
       const r=await res.json(); if(r.error){showToast(r.error,'error');return;} showToast(editingRowId?'Updated!':'Added!','success');
     }
-    closeDrawer(); loadData(); // non-blocking reload
+    clearDraft(currentTab, editingRowId); closeDrawer(true); loadData(); // non-blocking reload
   } catch(e){
     const msg = e.message||String(e);
     const isCORS = msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS');
@@ -2025,7 +2208,8 @@ async function deleteRow() {
     const r = await res.json();
     if (r.error) { showToast(r.error, 'error'); btn.disabled=false; btn.innerHTML=origHTML; return; }
     showToast('Deleted successfully', 'success');
-    closeDrawer();
+    clearDraft(currentTab, editingRowId);
+    closeDrawer(true);
     await loadData();
   } catch(e) {
     const isCORS = e.message.includes('Failed to fetch') || e.message.includes('NetworkError');
@@ -2318,7 +2502,9 @@ document.addEventListener('click', e => {
 // ── PWA install prompt ────────────────────────────────────────
 let _deferredInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
+  // NOTE: intentionally NOT calling e.preventDefault() — this lets Chrome
+  // show its own automatic install banner/omnibox icon. We still stash the
+  // event so our in-app "Install" button can also trigger it on demand.
   _deferredInstallPrompt = e;
   const btn = document.getElementById('btn-install-pwa');
   if (btn) btn.style.display = 'inline-flex';
