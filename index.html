@@ -404,8 +404,15 @@
     #change-password-modal.show { display: flex; }
     #add-member-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 210; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
     #add-member-modal.show { display: flex; }
+    #attach-help-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 220; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    #attach-help-modal.show { display: flex; }
+    .attach-illustration { display: flex; justify-content: center; margin-bottom: 14px; }
+    .attach-steps { font-size: 12px; line-height: 1.7; color: var(--text); padding-left: 18px; margin: 0 0 16px; }
+    .cm-file-chip { display: inline-flex; align-items: center; gap: 5px; background: rgba(0,212,160,0.1); color: var(--accent2); border: 1px solid rgba(0,212,160,0.25); padding: 4px 10px; border-radius: 8px; font-size: 12px; text-decoration: none; }
+    .cm-file-chip:hover { background: rgba(0,212,160,0.18); }
     .login-box { background: var(--surface); border: 1px solid rgba(108,99,255,0.3); border-radius: 16px; padding: 34px; width: 340px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
-    .login-box h2 { font-size: 20px; font-weight: 800; margin-bottom: 4px; background: linear-gradient(135deg,#6c63ff,#00e5b0); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .login-box h2 { font-size: 20px; font-weight: 800; letter-spacing: 4px; margin-bottom: 4px; color: var(--text); }
+    .login-box h2 span { color: var(--accent2); }
     .login-box p { font-size: 11px; color: var(--muted); font-family: "Space Mono", monospace; margin-bottom: 22px; }
     #login-error { font-size: 11px; color: var(--danger); font-family: "Space Mono", monospace; margin-bottom: 10px; min-height: 16px; }
     #cp-error { font-size: 11px; color: var(--danger); font-family: "Space Mono", monospace; margin-bottom: 10px; min-height: 16px; }
@@ -496,7 +503,7 @@
 <!-- LOGIN MODAL -->
 <div id="login-modal">
   <div class="login-box">
-    <h2>NEXUS</h2>
+    <h2>NEX<span>US</span></h2>
     <p>Sign in with your Google account to continue.</p>
     <div id="google-signin-btn" style="display:flex;justify-content:center;margin:16px 0"></div>
     <div id="google-signin-error"></div>
@@ -589,6 +596,40 @@
   </div>
 </div>
 
+<!-- SHARE-A-FILE HELP MODAL — NEXUS doesn't store files itself, so this
+     walks people through sharing a Drive link and drops it into the chat
+     input looking like a proper attachment (📎 file chip), instead of a
+     bare pasted URL. -->
+<div id="attach-help-modal">
+  <div class="login-box" style="width:380px">
+    <h2>📎 Share a file</h2>
+    <p>NEXUS doesn't store files directly — share it via Google Drive instead.</p>
+    <div class="attach-illustration">
+      <svg width="120" height="72" viewBox="0 0 120 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="118" height="70" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+        <path d="M60 18l14 24H46l14-24z" fill="#5b52f0"/>
+        <path d="M46 42h28l-6 10H52l-6-10z" fill="#00d4a0"/>
+        <path d="M60 18L46 42h10l10-17z" fill="#f0a030"/>
+        <rect x="14" y="54" width="92" height="6" rx="3" fill="var(--border)"/>
+        <rect x="14" y="54" width="60" height="6" rx="3" fill="var(--accent2)"/>
+      </svg>
+    </div>
+    <ol class="attach-steps">
+      <li>Upload the file to Google Drive.</li>
+      <li>Right-click it → <b>Share</b> → <b>Copy link</b>.</li>
+      <li>Paste it below — NEXUS will set it viewable to the team automatically.</li>
+    </ol>
+    <div class="form-group">
+      <label>Drive link</label>
+      <input type="text" class="form-input" id="attach-link-input" placeholder="https://drive.google.com/…" autocomplete="off" onkeydown="if(event.key==='Enter')insertAttachLink()">
+    </div>
+    <div id="attach-error"></div>
+    <button class="btn-primary" id="attach-btn" style="width:100%;margin-bottom:10px" onclick="insertAttachLink()">Add to message</button>
+    <button class="btn-secondary" style="width:100%;font-size:12px" onclick="closeAttachHelpModal()">Cancel</button>
+    <p style="font-size:11px;color:var(--muted);margin:14px 0 0">Don't want to deal with Drive? You can just drop a message for them right here on the NEXUS app instead.</p>
+  </div>
+</div>
+
 <!-- MEETING NOTIFICATION BANNER -->
 <div id="meeting-notify-banner">
   <h4>New Meeting(s) for you</h4>
@@ -647,6 +688,7 @@
   </div>
   <div id="chat-messages" style="flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:10px"></div>
   <div style="padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end">
+    <button class="btn-sm" title="Share a file" onclick="openAttachHelpModal('team')" style="flex-shrink:0">📎</button>
     <textarea id="chat-input" class="form-input" rows="1" placeholder="Message the team…" style="resize:none;flex:1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTeamChatMessage();}"></textarea>
     <button class="btn-primary" style="flex-shrink:0" onclick="sendTeamChatMessage()">Send</button>
   </div>
@@ -773,7 +815,7 @@
         💬 Chat
         <span id="chat-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-size:9px;font-family:'Space Mono',monospace;min-width:16px;height:16px;border-radius:20px;align-items:center;justify-content:center;padding:0 4px;line-height:1">0</span>
       </button>
-      <button class="top-btn btn-mytasks" style="background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2)" onclick="openMyTasks()" title="Team member quick-update view">👤 My Tasks</button>
+      <button class="top-btn btn-mytasks" style="background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2);position:relative" onclick="openMyTasks()" title="Team member quick-update view">👤 My Tasks<span id="mytasks-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-size:9px;font-family:'Space Mono',monospace;min-width:16px;height:16px;border-radius:20px;align-items:center;justify-content:center;padding:0 4px;line-height:1">0</span></button>
       <button class="top-btn btn-sync" id="btn-sync" onclick="syncData()">↻ Sync</button>
       <button class="top-btn" id="btn-theme" onclick="toggleTheme()" title="Toggle light/dark theme" style="font-size:14px;padding:0 8px">☀</button>
       <button class="top-btn" style="background:rgba(91,82,240,0.1);border-color:rgba(91,82,240,0.25);color:#8880ff" onclick="openLoginModal()" id="btn-login">Login</button>
@@ -1148,13 +1190,15 @@ const FORM_SCHEMAS = {
       {key:'Assigned_To_Email',label:'Assignee Email',type:'email',placeholder:'name@rescuetap.org',leaderOnly:true},
       {key:'Support Person',label:'Support Person',type:'select',options:['','Ayo T. Joshua','Shina Samson','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)'],leaderOnly:true},
       {key:'Support_Person_Email',label:'CC Email (Support Person)',type:'email',placeholder:'name@rescuetap.org',leaderOnly:true},
-      {key:'Business / Dept',label:'Department',type:'select',options:['','COS','Partnerships','Marketing','Tech','Operations','Finance','HR'],leaderOnly:true},
+      {key:'Business / Dept',label:'Department',type:'select',options:['','COS','Partnerships','Marketing','Product','Operations','Finance','HR'],leaderOnly:true},
       {section:'Priority & Timing'},
       {key:'Priority',label:'Priority',type:'select',options:['URGENT','HIGH','MEDIUM','LOW'],required:true,leaderOnly:true},
       {key:'Status',label:'Status',type:'select',options:['Not Started','In Progress','Done','Cancelled','Blocked','In Review'],required:true},
       {key:'% Progress',label:'% Progress (auto-set from status)',type:'number',placeholder:'Auto',readonly:true},
       {key:'Start Date',label:'Start Date',type:'date',immutableOnEdit:true},
       {key:'Deadline',label:'Deadline',type:'date',leaderOnly:true},
+      {key:'Deadline_Time',label:'Deadline Time (optional, defaults to 9:00 AM)',type:'time',leaderOnly:true},
+      {key:'Depends On',label:'Depends On (Task ID(s), comma-separated)',type:'text',placeholder:'e.g. 1-17209... , 1-17210...',leaderOnly:true},
       {section:'Notes'},
       {key:'Notes',label:'Notes',type:'textarea',placeholder:'Additional context...'},
       {key:'Proof Link',label:'Proof Link',type:'url',placeholder:'https://...'},
@@ -1369,7 +1413,7 @@ async function handleGoogleCredential(response) {
     const r = await res.json();
     if (r.error === 'no_match') { errEl.textContent = r.message || "That Google account isn't on the team roster yet."; return; }
     if (r.error) { errEl.textContent = r.error; return; }
-    setTeamSession(r.token, r.name);
+    setTeamSession(r.token, r.name, r.isLeader);
     closeLoginModal();
     updateChatIdentityLine();
     refreshChatBadge();
@@ -1401,6 +1445,18 @@ function loadView(name) {
 // ============================================================
 //  DATA
 // ============================================================
+// Opens the specific task from a ?task=ID link (used in assignment emails
+// so people land on their task instead of the generic homepage). Runs once
+// per page load, after data is in.
+let _deepLinkHandled = false;
+function openDeepLinkedTaskIfAny() {
+  if (_deepLinkHandled) return;
+  const taskId = new URLSearchParams(window.location.search).get('task');
+  if (!taskId) return;
+  _deepLinkHandled = true;
+  const row = findRowById('1. Master Tasks', taskId);
+  if (row) editRow(taskId, '1. Master Tasks');
+}
 async function loadData() {
   if (SCRIPT_URL.includes('YOUR_SCRIPT_ID_HERE')) {
     showToast('SCRIPT_URL not configured — open the file and set your Apps Script URL', 'error');
@@ -1422,6 +1478,7 @@ async function loadData() {
     updateNavBadges();
     checkMeetingNotifications();
     refreshChatBadge();
+    openDeepLinkedTaskIfAny();
   } catch(e) {
     const isCORS = e.message.includes('Failed to fetch') || e.message.includes('NetworkError') || e.message.includes('CORS') || e.message === 'Failed to fetch';
     if (isCORS) {
@@ -1525,8 +1582,29 @@ function daysSince(ds) { if(!ds) return null; const d=new Date(ds); return isNaN
 function taskStaleDays(t) { const ref=t['Last_Updated']||t['Start Date']; const d=daysSince(ref); return d===null?999:d; }
 function statusBadge(s) { const m={'Not Started':'badge-gray','In Progress':'badge-blue','Done':'badge-green','Cancelled':'badge-gray','Blocked':'badge-red','Active':'badge-green','Pending':'badge-yellow','MoU Pending':'badge-yellow','In Discussion':'badge-blue','Cold':'badge-gray','Draft Sent':'badge-orange','Signed':'badge-green','Declined':'badge-red','In Review':'badge-yellow','Scheduled':'badge-teal','Y':'badge-green','N':'badge-red'}; return '<span class="badge-pill '+(m[s]||'badge-gray')+'">'+( s||'--')+'</span>'; }
 function priorityBadge(p) { const m={'URGENT':'badge-red','HIGH':'badge-red','MEDIUM':'badge-yellow','LOW':'badge-green'}; return '<span class="badge-pill '+(m[p]||'badge-gray')+'">'+(p||'--')+'</span>'; }
+// Renders one small pill per "Depends On" task ID: green if that task is Done,
+// red if still open, gray if the ID isn't found (typo/removed task).
+function depChipsHtml(t) {
+  const raw = String(t['Depends On']||'').trim();
+  if (!raw) return '';
+  const all = appData.tasks||[];
+  const ids = raw.split(',').map(s=>s.trim()).filter(Boolean);
+  return '<div style="margin-top:3px">' + ids.map(id=>{
+    const dep = all.find(x=>String(x.ID).trim()===id);
+    const cls = !dep ? 'unknown' : (dep.Status==='Done' ? 'done' : 'pending');
+    const label = !dep ? id+' ?' : id+(dep.Status==='Done'?' ✓':' …');
+    return '<span class="dep-chip '+cls+'" title="Depends on '+id+(dep?' — '+dep.Status:' — task not found')+'">⛓ '+label+'</span>';
+  }).join('') + '</div>';
+}
 function progressBar(pct) { const n=parseInt(pct)||0; return n+'%<span class="progress-track"><span class="progress-fill'+(n>=100?' complete':'')+'" style="width:'+Math.min(n,100)+'%"></span></span>'; }
-function isLeader() { const t=sessionStorage.getItem('nexus_leader_token'); return !!(t && t !== 'null'); }
+function isLeader() {
+  const t = sessionStorage.getItem('nexus_leader_token');
+  if (t && t !== 'null') return true;
+  // Google-authenticated leaders (e.g. Ayo signing in with his Google
+  // account instead of the legacy passphrase form) get the same leader
+  // access — the backend confirms this at login and on every request.
+  return localStorage.getItem('nexus_team_isleader') === '1';
+}
 function noDataRow(cols,msg) { return '<tr><td colspan="'+cols+'" style="color:var(--muted);text-align:center;padding:22px;font-size:12px">'+(msg||'No data. Press Sync.')+'</td></tr>'; }
 function escQ(s) { return String(s||'').replace(/'/g,'&#39;'); }
 function escAttr(s) { return String(s||'').replace(/"/g,'&quot;'); }
@@ -1616,7 +1694,7 @@ function renderTasks() {
   document.getElementById('nav-badge-tasks').textContent = (appData.tasks||[]).filter(t=>!['Done','Cancelled'].includes(t.Status)).length;
   document.getElementById('tasks-tbody').innerHTML = tasks.map(t=>{
     const stale=taskStaleDays(t); const sw=stale>=2&&!['Done','Cancelled'].includes(t.Status)?'<span class="badge-pill badge-red" style="margin-left:4px">'+stale+'d</span>':'';
-    return '<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+sw+'</td><td>'+priorityBadge(t.Priority)+'</td><td>'+t['Assigned To']+'</td><td>'+(t['Support Person']||'--')+'</td><td>'+(t['Business / Dept']||'--')+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(t.Deadline||'--')+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Edit</button></td></tr>';
+    return '<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+sw+depChipsHtml(t)+'</td><td>'+priorityBadge(t.Priority)+'</td><td>'+t['Assigned To']+'</td><td>'+(t['Support Person']||'--')+'</td><td>'+(t['Business / Dept']||'--')+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(t.Deadline||'--')+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Edit</button></td></tr>';
   }).join('')||noDataRow(10,'No tasks');
 }
 
@@ -1923,6 +2001,36 @@ function updateNavBadges() {
   document.getElementById('nav-badge-failsafe').textContent=mis+blk+ovd+stp;
   const meetings=appData.meetings||[];
   document.getElementById('nav-badge-meetings').textContent=meetings.filter(m=>new Date(m.Date)>=new Date(today.toDateString())).length||'0';
+  refreshMyTasksBadge();
+}
+
+// "New task assigned to me" badge on the My Tasks button — mirrors the chat
+// unread badge. A task counts as "new" if it's assigned to the current
+// identity and its ID hasn't been seen before (tracked in localStorage).
+// Opening My Tasks marks everything currently assigned as seen.
+function refreshMyTasksBadge() {
+  const badge = document.getElementById('mytasks-badge');
+  if (!badge) return;
+  const me = getIdentity();
+  if (!me) { badge.style.display = 'none'; return; }
+  const mine = (appData.tasks||[]).filter(t =>
+    String(t['Assigned To']??'').split(/[,\/&+]+/).map(n=>n.trim().toLowerCase()).includes(me.trim().toLowerCase())
+  );
+  let seen = [];
+  try { seen = JSON.parse(localStorage.getItem('nexus_mytasks_seen_'+me) || '[]'); } catch(e) {}
+  const seenSet = new Set(seen);
+  const unseen = mine.filter(t => !seenSet.has(t.ID));
+  if (unseen.length > 0) { badge.textContent = unseen.length > 99 ? '99+' : unseen.length; badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
+}
+function markMyTasksSeen() {
+  const me = getIdentity();
+  if (!me) return;
+  const mine = (appData.tasks||[]).filter(t =>
+    String(t['Assigned To']??'').split(/[,\/&+]+/).map(n=>n.trim().toLowerCase()).includes(me.trim().toLowerCase())
+  );
+  try { localStorage.setItem('nexus_mytasks_seen_'+me, JSON.stringify(mine.map(t=>t.ID))); } catch(e) {}
+  refreshMyTasksBadge();
 }
 
 // ============================================================
@@ -1950,6 +2058,7 @@ function openMyTasks() {
   document.getElementById('mytasks-overlay').style.display = 'block';
   document.getElementById('mytasks-panel').style.transform = 'translateX(0)';
   setTimeout(renderMyTasks, 0);
+  markMyTasksSeen();
 }
 
 function closeMyTasks() {
@@ -1975,13 +2084,23 @@ let _pendingOpenChat = false;
 // enforced expiry), so people don't have to re-enter their PIN constantly.
 function getTeamToken()  { return localStorage.getItem('nexus_team_token'); }
 function getTeamName()   { return localStorage.getItem('nexus_team_name'); }
-function setTeamSession(token, name) { localStorage.setItem('nexus_team_token', token); localStorage.setItem('nexus_team_name', name); }
-function clearTeamSession() { localStorage.removeItem('nexus_team_token'); localStorage.removeItem('nexus_team_name'); }
+function setTeamSession(token, name, isLeaderFlag) { localStorage.setItem('nexus_team_token', token); localStorage.setItem('nexus_team_name', name); localStorage.setItem('nexus_team_isleader', isLeaderFlag ? '1' : ''); }
+function clearTeamSession() { localStorage.removeItem('nexus_team_token'); localStorage.removeItem('nexus_team_name'); localStorage.removeItem('nexus_team_isleader'); }
 
 // Leaders are already authenticated via their own session — treat that as
 // identity too so they don't need a separate chat login.
 function getIdentity() { return leaderName || getTeamName() || null; }
 function getIdentityToken() { return leaderName ? leaderToken : getTeamToken(); }
+
+// Mirrors NAME_ALIASES in code.gs — collapses known duplicate roster names
+// (e.g. a legacy short "Ayo" alongside "Ayo T. Joshua") to one canonical
+// display name, so old chat messages/history read as one person too.
+const NAME_ALIASES = { 'AYO': 'Ayo T. Joshua', 'AYO T JOSHUA': 'Ayo T. Joshua', 'AYO JOSHUA': 'Ayo T. Joshua' };
+function canonicalizeName(name) {
+  if (!name) return name;
+  const key = String(name).trim().toUpperCase().replace(/\.+/g, '');
+  return NAME_ALIASES[key] || name;
+}
 
 // Called whenever a chat/push request comes back with "Login required."
 // (token missing, expired, or revoked) — clears the stale session and asks
@@ -2054,13 +2173,31 @@ async function loadTeamChat(scrollToBottom) {
   } catch (e) { /* silent — polling will retry */ }
 }
 
+function renderMessageBody(raw) {
+  const text = String(raw || '');
+  // "📎 File Name — https://..." (from the chat attach helper) → a file chip
+  const fileMatch = text.match(/^📎\s*(?:(.*?)\s*—\s*)?(https?:\/\/\S+)([\s\S]*)$/);
+  if (fileMatch) {
+    const label = fileMatch[1] ? escHtml(fileMatch[1]) : 'Shared file';
+    const url   = fileMatch[2];
+    const rest  = fileMatch[3].trim();
+    return '<a href="' + escAttr(url) + '" target="_blank" rel="noopener" class="cm-file-chip">📎 ' + label + ' — open</a>'
+      + (rest ? '<div style="margin-top:4px">' + linkifyPlain(rest) + '</div>' : '');
+  }
+  return linkifyPlain(text);
+}
+function linkifyPlain(text) {
+  return escHtml(text).replace(/(https?:\/\/[^\s<]+)/g, function (url) {
+    return '<a href="' + url + '" target="_blank" rel="noopener" style="color:var(--accent2);text-decoration:underline">' + url + '</a>';
+  });
+}
 function renderChatMessages(container, messages) {
   const me = getIdentity();
   if (!messages.length) { container.innerHTML = '<div class="chat-empty">No messages yet. Say hi 👋</div>'; return; }
   container.innerHTML = messages.map(m => {
-    const mine = m.Author === me;
-    const time = new Date(m.Timestamp).toLocaleString('en-NG', { hour: 'numeric', minute: '2-digit', day: 'numeric', month: 'short' });
-    return '<div class="chat-msg' + (mine ? ' mine' : '') + '"><div class="cm-author">' + escHtml(m.Author) + '</div><div>' + escHtml(m.Message) + '</div><div class="cm-time">' + time + '</div></div>';
+    const mine = canonicalizeName(m.Author) === canonicalizeName(me);
+    const time = new Date(m.Timestamp).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, day: 'numeric', month: 'short' });
+    return '<div class="chat-msg' + (mine ? ' mine' : '') + '"><div class="cm-author">' + escHtml(canonicalizeName(m.Author)) + '</div><div>' + renderMessageBody(m.Message) + '</div><div class="cm-time">' + time + '</div></div>';
   }).join('');
 }
 function scrollChatToBottom(id) { const el = document.getElementById(id); if (el) el.scrollTop = el.scrollHeight; }
@@ -2110,6 +2247,7 @@ function taskThreadHTML(taskId) {
     + '<div style="font-size:11px;font-weight:700;font-family:\'Space Mono\',monospace;color:var(--muted);margin-bottom:8px">💬 DISCUSSION</div>'
     + '<div id="task-thread-msgs"><div class="chat-empty">Loading…</div></div>'
     + '<div id="task-thread-input-row">'
+    + '<button type="button" class="btn-sm" title="Share a file" onclick="openAttachHelpModal(\'task\',\'' + escQ(taskId) + '\')" style="flex-shrink:0">📎</button>'
     + '<textarea class="form-input" id="task-thread-input" rows="1" placeholder="Comment on this task…" style="resize:none;flex:1" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendTaskChatMessage(\'' + escQ(taskId) + '\');}"></textarea>'
     + '<button type="button" class="btn-secondary" onclick="sendTaskChatMessage(\'' + escQ(taskId) + '\')">Send</button>'
     + '</div></div>';
@@ -2236,7 +2374,7 @@ function renderMyTasks() {
     const pct = parseInt(t['% Progress']) || 0;
     return '<div style="background:var(--surface2);border:1px solid var(--border'+(isOverdue?'2':'')+')'+(isOverdue?';border-left:3px solid var(--danger)':'')+';border-radius:10px;padding:14px;margin-bottom:10px">'
       + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">'
-      +   '<div style="font-size:13px;font-weight:700;line-height:1.4;word-break:break-word;flex:1">' + t['Task Description'] + '</div>'
+      +   '<div style="font-size:13px;font-weight:700;line-height:1.4;word-break:break-word;flex:1">' + t['Task Description'] + depChipsHtml(t) + '</div>'
       +   '<div style="display:flex;gap:4px;flex-shrink:0">' + priorityBadge(t.Priority) + '</div>'
       + '</div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px">'
@@ -2291,7 +2429,7 @@ async function updateTaskNotes(taskId, value, el) {
   } catch(e) { showToast('Save failed: '+e.message, 'error'); }
   el.disabled = false;
 }
-function openLoginModal() { if(isLeader()){showToast('Already logged in as '+leaderName,'success');return;} document.getElementById('login-modal').classList.add('show'); document.getElementById('login-error').textContent=''; }
+function openLoginModal() { if(isLeader()){showToast('Already logged in as '+(getIdentity()||''),'success');return;} document.getElementById('login-modal').classList.add('show'); document.getElementById('login-error').textContent=''; }
 function closeLoginModal() { document.getElementById('login-modal').classList.remove('show'); }
 
 async function submitLogin() {
@@ -2371,13 +2509,14 @@ async function submitChangePassword() {
 
 function updateLeaderUI() {
   const show=isLeader();
+  const displayName=getIdentity()||'';
   document.getElementById('leader-badge').classList.toggle('show',show);
   document.getElementById('topbar-leader-pill').classList.toggle('show',show);
-  if(show) document.getElementById('lb-name-text').textContent=leaderName;
+  if(show) document.getElementById('lb-name-text').textContent=displayName;
   const lb=document.getElementById('btn-login');
-  if(lb) { lb.textContent=show?('⚡ '+leaderName.split(' ')[0]):'Login'; lb.style.color=show?'var(--accent2)':'#8880ff'; }
+  if(lb) { lb.textContent=show?('⚡ '+displayName.split(' ')[0]):'Login'; lb.style.color=show?'var(--accent2)':'#8880ff'; }
   const slb=document.getElementById('su-login-btn');
-  if(slb) { slb.textContent=show?('⚡ '+leaderName.split(' ')[0]):'Login'; slb.classList.toggle('green',show); }
+  if(slb) { slb.textContent=show?('⚡ '+displayName.split(' ')[0]):'Login'; slb.classList.toggle('green',show); }
   const stb=document.getElementById('su-theme-btn');
   if(stb) stb.textContent=(document.documentElement.getAttribute('data-theme')==='light'?'🌙':'☀')+' Theme';
   const teamNav=document.getElementById('nav-team-item');
@@ -2529,7 +2668,7 @@ function generateForm() {
         +'<span class="dp-val">'+(resolvedVal||'Select date')+'</span>'
         +'<span class="dp-icon">📅</span>'
         +'</div>'
-        +'<input type="hidden" name="'+escAttr(field.key)+'" value="'+escAttr(resolvedVal)+'"'+(dpLocked?' disabled':'')+'>'
+        +'<input type="hidden" class="form-input" name="'+escAttr(field.key)+'" value="'+escAttr(resolvedVal)+'"'+(dpLocked?' disabled':'')+'>'
         +'</div>';
     } else if(field.type==='drivelink'){
       input='<div style="display:flex;gap:6px">'
@@ -2620,6 +2759,45 @@ function closeAddMemberModal() {
   document.getElementById('add-member-modal').classList.remove('show');
   addMemberContext = null;
 }
+
+// ─── Share-a-file (chat) — mimics an "attach" experience by piggybacking on
+// the same getShareLink endpoint the Proof Link field already uses: paste a
+// Drive link, NEXUS sets it viewable-to-anyone-with-the-link server-side,
+// and the resulting link + file name get dropped into the chat box as a
+// 📎-prefixed message so it renders as a file chip (see renderMessageBody). ──
+let _attachTarget = { channel: 'team', taskId: null };
+function openAttachHelpModal(channel, taskId) {
+  _attachTarget = { channel: channel === 'task' ? 'task' : 'team', taskId: taskId || null };
+  const linkEl = document.getElementById('attach-link-input');
+  const errEl  = document.getElementById('attach-error');
+  if (linkEl) linkEl.value = '';
+  if (errEl)  errEl.textContent = '';
+  document.getElementById('attach-help-modal').classList.add('show');
+}
+function closeAttachHelpModal() { document.getElementById('attach-help-modal').classList.remove('show'); }
+async function insertAttachLink() {
+  const linkEl = document.getElementById('attach-link-input');
+  const errEl  = document.getElementById('attach-error');
+  const raw = linkEl ? linkEl.value.trim() : '';
+  if (!raw) { errEl.textContent = 'Paste a link first.'; return; }
+  const btn = document.getElementById('attach-btn');
+  const origText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Checking link…'; errEl.textContent = '';
+  try {
+    const res = await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'getShareLink', token: getIdentityToken(), url: raw }) });
+    const r = await res.json();
+    if (r.error) { errEl.textContent = r.error; btn.disabled = false; btn.textContent = origText; return; }
+    const snippet = '📎 ' + (r.name ? r.name + ' — ' : '') + r.url;
+    const targetId = (_attachTarget.channel === 'task') ? 'task-thread-input' : 'chat-input';
+    const inputEl = document.getElementById(targetId);
+    if (inputEl) inputEl.value = (inputEl.value.trim() ? inputEl.value.trim() + '\n' : '') + snippet;
+    closeAttachHelpModal();
+  } catch (e) {
+    errEl.textContent = 'Network error — could not check that link.';
+  }
+  btn.disabled = false; btn.textContent = origText;
+}
+
 // ─── Drive share links (no attachments, no email quota) ───────
 async function requestShareLink() {
   const input = document.getElementById('drive-link-input');
@@ -2730,7 +2908,19 @@ async function submitForm() {
   btn.disabled=false; btn.textContent=origText;
 }
 
-function editRow(id,tab){openDrawer(tab,id);}
+function editRow(id,tab){
+  if(tab==='1. Master Tasks' && !isLeader()){
+    const row = findRowById(tab,id);
+    const me = (getIdentity()||'').trim().toLowerCase();
+    const owner = row ? String(row['Assigned To']||'').trim().toLowerCase() : '';
+    const isTrusted = ['chizaram'].includes(me); // mirrors TRUSTED_EDITORS server-side
+    if(row && owner && owner!==me && !isTrusted){
+      showToast("You can only edit tasks assigned to you.", 'error');
+      return;
+    }
+  }
+  openDrawer(tab,id);
+}
 
 async function deleteRow() {
   if (!editingRowId || !isLeader()) return;
