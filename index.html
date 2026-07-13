@@ -1726,7 +1726,6 @@ function renderTasks() {
     tasks=tasks.filter(t=>[t.ID,t['Task Description'],t['Assigned To'],t['Support Person'],t['Business / Dept'],t.Notes].some(v=>String(v??'').toLowerCase().includes(q)));
   }
   if(fStatus)   tasks=tasks.filter(t=>t.Status===fStatus);
-  else          tasks=tasks.filter(t=>t.Status!=='Done'); // hide Done tasks by default; only show them when the Done status filter is explicitly selected
   if(fOwner)    tasks=tasks.filter(t=>String(t['Assigned To']??'').split(/[,\/&+]+/).map(n=>n.trim().toLowerCase()).includes(fOwner.trim().toLowerCase())); // split multi-assignee field and check if selected name is one of them
   if(fPriority) tasks=tasks.filter(t=>t.Priority===fPriority);
   const fc=document.getElementById('tasks-filter-count');
