@@ -410,6 +410,12 @@
     #add-member-modal.show { display: flex; }
     #attach-help-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 220; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
     #attach-help-modal.show { display: flex; }
+    #link-task-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 220; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    #link-task-modal.show { display: flex; }
+    .link-task-item { padding: 8px; border-bottom: 1px solid var(--border); cursor: pointer; border-radius: 6px; }
+    .link-task-item:hover { background: rgba(255,255,255,0.05); }
+    .link-task-item .lt-title { font-size: 12px; font-weight: 700; }
+    .link-task-item .lt-meta { font-size: 10px; font-family: 'Space Mono', monospace; color: var(--muted); margin-top: 2px; }
     .attach-illustration { display: flex; justify-content: center; margin-bottom: 14px; }
     .attach-steps { font-size: 12px; line-height: 1.7; color: var(--text); padding-left: 18px; margin: 0 0 16px; }
     .cm-file-chip { display: inline-flex; align-items: center; gap: 5px; background: rgba(0,212,160,0.1); color: var(--accent2); border: 1px solid rgba(0,212,160,0.25); padding: 4px 10px; border-radius: 8px; font-size: 12px; text-decoration: none; }
@@ -634,6 +640,19 @@
   </div>
 </div>
 
+<div id="link-task-modal">
+  <div class="login-box" style="width:380px">
+    <h2>🔗 Link a task</h2>
+    <p>Search by task ID or description, then pick one to drop a clickable link into your message.</p>
+    <div class="form-group">
+      <label>Search tasks</label>
+      <input type="text" class="form-input" id="link-task-search" placeholder="Start typing…" autocomplete="off" oninput="renderLinkTaskResults(this.value)">
+    </div>
+    <div id="link-task-results" style="max-height:260px;overflow-y:auto;margin:8px 0"></div>
+    <button class="btn-secondary" style="width:100%;font-size:12px" onclick="closeLinkTaskModal()">Cancel</button>
+  </div>
+</div>
+
 <!-- MEETING NOTIFICATION BANNER -->
 <div id="meeting-notify-banner">
   <h4>New Meeting(s) for you</h4>
@@ -661,7 +680,7 @@
     </select>
   </div>
   <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-    <button class="btn-sm mytasks-filter active" data-filter="all" onclick="setMyTaskFilter('all',this)">All</button>
+    <button class="btn-sm mytasks-filter active" data-filter="all" onclick="setMyTaskFilter('all',this)">Open</button>
     <button class="btn-sm mytasks-filter" data-filter="active" onclick="setMyTaskFilter('active',this)">Active</button>
     <button class="btn-sm mytasks-filter" data-filter="urgent" onclick="setMyTaskFilter('urgent',this)">🔴 Urgent</button>
     <button class="btn-sm mytasks-filter" data-filter="done" onclick="setMyTaskFilter('done',this)">✓ Done</button>
@@ -703,6 +722,7 @@
     <div id="chat-messages" style="flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:10px"></div>
     <div style="padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end">
       <button class="btn-sm" title="Share a file" onclick="openAttachHelpModal('team')" style="flex-shrink:0">📎</button>
+      <button class="btn-sm" title="Link a task" onclick="openLinkTaskModal()" style="flex-shrink:0">🔗</button>
       <textarea id="chat-input" class="form-input" rows="1" placeholder="Message the team…" style="resize:none;flex:1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatPanelMessage();}"></textarea>
       <button class="btn-primary" style="flex-shrink:0" onclick="sendChatPanelMessage()">Send</button>
     </div>
@@ -1162,7 +1182,7 @@
 //  CONFIG
 //  Replace SCRIPT_URL with your deployed Apps Script web app URL
 // ============================================================
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBqJuyf4L75L0e2jFtYBwIdzoLYvGClsodIukVHHV3XY5p0AJzqQmp12JlMHW-2DeO/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzYaix0o5LwTpsTXcN-KozoCkfDsdrq6EyTkSlRsN64-qXJLSKApCDSNy8YE8ZjQnfV/exec';
 
 // Guard: warn if SCRIPT_URL has not been configured
 if (SCRIPT_URL.includes('YOUR_SCRIPT_ID_HERE')) {
@@ -2080,6 +2100,7 @@ function refreshMyTasksBadge() {
   if (!me) { badge.style.display = 'none'; return; }
   const mine = (appData.tasks||[]).filter(t =>
     String(t['Assigned To']??'').split(/[,\/&+]+/).map(n=>n.trim().toLowerCase()).includes(me.trim().toLowerCase())
+    && t.Status !== 'Done'
   );
   let seen = [];
   try { seen = JSON.parse(localStorage.getItem('nexus_mytasks_seen_'+me) || '[]'); } catch(e) {}
@@ -2194,6 +2215,7 @@ async function teamLogoutClick() {
   const token = getIdentityToken();
   if (leaderName) { showToast("You're logged in as a leader — sign out from the sidebar instead.", ''); return; }
   clearTeamSession();
+  updateLeaderUI();
   updateChatIdentityLine();
   refreshChatBadge();
   showToast('Logged out of chat', 'success');
@@ -2232,9 +2254,13 @@ function closeChatPanel() {
 function startChatPolling() {
   stopChatPolling();
   chatPollInterval = setInterval(() => {
+    // Only the two "live conversation" views poll on a timer — an open
+    // task thread, or General. The threads list itself (My/All Task Chats)
+    // doesn't need to re-fetch every 12s; it already refreshes whenever you
+    // switch to it or come back from an open thread, which is plenty for
+    // a list you're scanning rather than actively chatting in.
     if (chatActiveTaskId) loadActiveTaskThread(false);
     else if (chatActiveTab === 'team') loadTeamChat(false);
-    else loadChatThreadsList(chatActiveTab === 'mine');
     refreshChatBadge();
   }, 12000);
 }
@@ -2366,6 +2392,15 @@ function renderMessageBody(raw) {
     const url   = fileMatch[2];
     const rest  = fileMatch[3].trim();
     return '<a href="' + escAttr(url) + '" target="_blank" rel="noopener" class="cm-file-chip">📎 ' + label + ' — open</a>'
+      + (rest ? '<div style="margin-top:4px">' + linkifyPlain(rest) + '</div>' : '');
+  }
+  // "🔗 Task: Title — #ID" (from the Link a task picker) → a clickable task chip
+  const taskMatch = text.match(/^🔗\s*Task:\s*(.+?)\s*—\s*#(\S+)([\s\S]*)$/);
+  if (taskMatch) {
+    const title = escHtml(taskMatch[1]);
+    const id    = taskMatch[2];
+    const rest  = taskMatch[3].trim();
+    return '<a href="#" onclick="event.preventDefault();openTaskFromChatLink(\'' + escAttr(id) + '\')" class="cm-file-chip">🔗 ' + title + ' — open task</a>'
       + (rest ? '<div style="margin-top:4px">' + linkifyPlain(rest) + '</div>' : '');
   }
   return linkifyPlain(text);
@@ -2535,6 +2570,7 @@ function renderMyTasks() {
     return String(t['Assigned To'] ?? '').split(/[,\/&+]+/).map(n => n.trim().toLowerCase()).includes(w);
   });
 
+  if (myTasksFilter === 'all')     tasks = tasks.filter(t => t.Status !== 'Done');
   if (myTasksFilter === 'active')  tasks = tasks.filter(t => !['Done','Cancelled'].includes(t.Status));
   if (myTasksFilter === 'urgent')  tasks = tasks.filter(t => ['URGENT','HIGH'].includes(t.Priority) && !['Done','Cancelled'].includes(t.Status));
   if (myTasksFilter === 'done')    tasks = tasks.filter(t => t.Status === 'Done');
@@ -2640,11 +2676,19 @@ async function submitLogin() {
 }
 
 async function logoutLeader() {
-  if(leaderToken) await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify({action:'leaderLogout',token:leaderToken})}).catch(()=>{});
+  if (leaderToken) await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify({action:'leaderLogout',token:leaderToken})}).catch(()=>{});
+  // Was only clearing the legacy passphrase session. A leader signed in
+  // with Google (the normal path) has no leaderToken, so this used to do
+  // nothing at all — while still showing "Signed out" — leaving them fully
+  // logged in. Now clears whichever session type is actually active.
+  const teamToken = getTeamToken();
+  if (teamToken) fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify({action:'teamLogout',token:teamToken})}).catch(()=>{});
   leaderToken=null; leaderName=null;
   sessionStorage.removeItem('nexus_leader_token'); sessionStorage.removeItem('nexus_leader_name');
-  updateLeaderUI(); showToast('Signed out','success');
-  if (!getTeamToken()) { document.getElementById('login-modal').classList.add('show'); initGoogleSignIn(); }
+  clearTeamSession();
+  updateLeaderUI(); updateChatIdentityLine(); refreshChatBadge();
+  showToast('Signed out','success');
+  document.getElementById('login-modal').classList.add('show'); initGoogleSignIn();
 }
 
 function togglePwVisibility(inputId, btn) {
@@ -2957,6 +3001,51 @@ function closeAddMemberModal() {
 // and the resulting link + file name get dropped into the chat box as a
 // 📎-prefixed message so it renders as a file chip (see renderMessageBody). ──
 let _attachTarget = { channel: 'team', taskId: null };
+function openLinkTaskModal() {
+  if (!getIdentity()) { promptIdentity(true); return; }
+  document.getElementById('link-task-modal').classList.add('show');
+  const search = document.getElementById('link-task-search');
+  search.value = '';
+  renderLinkTaskResults('');
+  search.focus();
+}
+function closeLinkTaskModal() { document.getElementById('link-task-modal').classList.remove('show'); }
+function renderLinkTaskResults(query) {
+  const wrap = document.getElementById('link-task-results');
+  const q = String(query || '').trim().toLowerCase();
+  let tasks = appData.tasks || [];
+  if (q) {
+    tasks = tasks.filter(t =>
+      String(t.ID || '').toLowerCase().includes(q) ||
+      String(t['Task Description'] || '').toLowerCase().includes(q)
+    );
+  }
+  tasks = tasks.slice(0, 25);
+  if (!tasks.length) { wrap.innerHTML = '<div class="chat-empty">No matching tasks.</div>'; return; }
+  wrap.innerHTML = tasks.map(t =>
+    '<div class="link-task-item" onclick="insertTaskLink(\'' + escQ(t.ID) + '\',\'' + escQ(t['Task Description'] || ('Task ' + t.ID)) + '\')">'
+    + '<div class="lt-title">' + escHtml(t['Task Description'] || ('Task ' + t.ID)) + '</div>'
+    + '<div class="lt-meta">#' + escHtml(t.ID) + ' · ' + escHtml(t['Assigned To'] || '—') + ' · ' + escHtml(t.Status || '') + '</div>'
+    + '</div>'
+  ).join('');
+}
+// Inserts a task-reference marker into the chat input, in the same spirit
+// as the file-share chip: plain text that renderMessageBody() recognizes
+// and turns into a clickable "open task" chip once the message is sent.
+function insertTaskLink(taskId, title) {
+  const snippet = '🔗 Task: ' + title + ' — #' + taskId;
+  const inputEl = document.getElementById('chat-input');
+  if (inputEl) inputEl.value = (inputEl.value.trim() ? inputEl.value.trim() + '\n' : '') + snippet;
+  closeLinkTaskModal();
+  if (inputEl) inputEl.focus();
+}
+// Opens the linked task's drawer from a chat message. Closes the chat
+// panel first so the drawer (and its own discussion thread) isn't hidden
+// behind it.
+function openTaskFromChatLink(taskId) {
+  closeChatPanel();
+  editRow(taskId, '1. Master Tasks');
+}
 function openAttachHelpModal(channel, taskId) {
   _attachTarget = { channel: channel === 'task' ? 'task' : 'team', taskId: taskId || null };
   const linkEl = document.getElementById('attach-link-input');
