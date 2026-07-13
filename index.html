@@ -742,7 +742,7 @@
         <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
         Org Database
       </a>
-      <a class="nav-item" data-view="kpi">
+      <a class="nav-item" id="nav-kpi-item" data-view="kpi" style="display:none">
         <svg fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
         Activity Log
       </a>
@@ -945,9 +945,14 @@
       <!-- KPI LOG -->
       <div id="view-kpi" class="view">
         <div id="kpi-alerts"></div>
+        <div id="kpi-flags"></div>
         <div class="card">
           <div class="card-head"><h3>Activity Log</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sm" onclick="loadView('eod')">+ Submit EOD</button><button class="btn-sm" onclick="exportCSV('kpi')">Export CSV</button></div></div>
           <div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Day</th><th>Member</th><th>Role</th><th>Completed</th><th>Achievement</th><th>Blockers</th><th>Filed</th><th></th></tr></thead><tbody id="kpi-tbody"></tbody></table></div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="card-head"><h3>Auto-Tracked Activity <span style="font-weight:400;font-size:11px;color:var(--muted)">— real task edits, not self-reported</span></h3></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>When</th><th>Member</th><th>Task</th><th>Field</th><th>Change</th></tr></thead><tbody id="auto-activity-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -1127,9 +1132,9 @@
       <!-- AUTOMATION -->
       <div id="view-automation" class="view">
         <div id="automation-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px"></div>
-        <div class="card">
-          <div class="card-head"><h3>Automation Log</h3></div>
-          <div class="table-wrap"><table class="data-table"><thead><tr><th>Key</th><th>Label</th><th>Status</th><th>Last Toggled</th><th>By</th></tr></thead><tbody id="automation-tbody"></tbody></table></div>
+        <div class="card" id="automation-log-card">
+          <div class="card-head"><h3>Automation Log <span style="font-weight:400;font-size:11px;color:var(--muted)">— full toggle history</span></h3></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>When</th><th>Key</th><th>Label</th><th>Set To</th><th>By</th></tr></thead><tbody id="automation-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -1157,7 +1162,7 @@ const ALL_TEAM_MEMBERS = [
   'Ayo T. Joshua','Shina Samson','Israel Idowu','Darlington','Chizaram',
   'Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora',
   'Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex',
-  'Mr Sam','Joshua (Tech)'
+  'Mr Sam','Joshua (Tech)','Daniel Bowman'
 ];
 // EOD attendance schedule: 0=Sun,1=Mon,...,5=Fri,6=Sat. Default = Mon-Fri for all others.
 const EOD_SCHEDULE_JS = {
@@ -1186,15 +1191,15 @@ const FORM_SCHEMAS = {
       {key:'ID',label:'Task ID',type:'text',placeholder:'e.g. T-001',required:true},
       {key:'Task Description',label:'Task Description',type:'text',placeholder:'What needs to be done?',required:true},
       {section:'Assignment'},
-      {key:'Assigned To',label:'Assigned To',type:'select',options:['','Ayo T. Joshua','Shina Samson','Israel Idowu','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)'],required:true,leaderOnly:true},
+      {key:'Assigned To',label:'Assigned To',type:'select',options:['','Ayo T. Joshua','Shina Samson','Israel Idowu','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)','Daniel Bowman'],required:true,leaderOnly:true},
       {key:'Assigned_To_Email',label:'Assignee Email',type:'email',placeholder:'name@rescuetap.org',leaderOnly:true},
-      {key:'Support Person',label:'Support Person',type:'select',options:['','Ayo T. Joshua','Shina Samson','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)'],leaderOnly:true},
+      {key:'Support Person',label:'Support Person',type:'select',options:['','Ayo T. Joshua','Shina Samson','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)','Daniel Bowman'],leaderOnly:true},
       {key:'Support_Person_Email',label:'CC Email (Support Person)',type:'email',placeholder:'name@rescuetap.org',leaderOnly:true},
       {key:'Business / Dept',label:'Department',type:'select',options:['','COS','Partnerships','Marketing','Product','Operations','Finance','HR'],leaderOnly:true},
       {section:'Priority & Timing'},
       {key:'Priority',label:'Priority',type:'select',options:['URGENT','HIGH','MEDIUM','LOW'],required:true,leaderOnly:true},
       {key:'Status',label:'Status',type:'select',options:['Not Started','In Progress','Done','Cancelled','Blocked','In Review'],required:true},
-      {key:'% Progress',label:'% Progress (auto-set from status)',type:'number',placeholder:'Auto',readonly:true},
+      {key:'% Progress',label:'% Progress (auto-nudged from status, or set it yourself)',type:'number',placeholder:'0-100',min:'0',max:'100'},
       {key:'Start Date',label:'Start Date',type:'date',immutableOnEdit:true},
       {key:'Deadline',label:'Deadline',type:'date',leaderOnly:true},
       {key:'Deadline_Time',label:'Deadline Time (optional, defaults to 9:00 AM)',type:'time',leaderOnly:true},
@@ -1290,6 +1295,7 @@ const TEAM_EMAILS = {
   'Joshua Alex'             : 'joshuaalex@rescuetap.org',
   'Mr Sam'                  : 'sam@rescuetap.org',
   'Joshua (Tech)'           : 'joshua.tech@rescuetap.org',
+  'Daniel Bowman'           : 'bowmandanielseth@gmail.com',
 };
 const ADD_MEMBER_OPTION = '+ Add New Member…';
 
@@ -1714,10 +1720,38 @@ function renderOrg() {
 }
 
 function renderKPI() {
+  // Leader-only view — the server also withholds autoActivity/activityFlags
+  // from non-leader payloads, but bounce here too in case someone reaches
+  // this view without the nav item (e.g. a stale bookmark/hash).
+  if(!isLeader()){showToast('Leader login required','error');loadView('dashboard');return;}
   const kpi=appData.kpi||[]; const todayStr=new Date().toDateString();
   const missing=getExpectedTodayMembers().filter(m=>!kpi.some(k=>new Date(k.Date).toDateString()===todayStr&&k['Team Member']===m));
   document.getElementById('kpi-alerts').innerHTML = missing.length?'<div class="alert-banner warn"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg><div><h4>'+missing.length+' member(s) have not filed EOD today</h4><ul>'+missing.slice(0,8).map(m=>'<li>'+m+'</li>').join('')+'</ul></div></div>':'';
   document.getElementById('kpi-tbody').innerHTML = [...kpi].reverse().map((k,i)=>'<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+k.Date+'</td><td>'+(k.Day||'--')+'</td><td>'+k['Team Member']+'</td><td>'+(k['Role']||'--')+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(k['What I Completed (with proof)']||'--')+'</td><td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(k['What I Moved Forward']||'--')+'</td><td>'+(k.Blockers||'--')+'</td><td>'+statusBadge(k['Report Submitted (Y/N)'])+'</td><td><button class="btn-sm" onclick="editRow(\''+(kpi.length-i)+'\',\'5. KPI Log\')">Edit</button></td></tr>').join('')||noDataRow(9,'No activity data');
+
+  // Flagged reports — EOD says "submitted" but no matching auto-tracked
+  // task activity exists for that person/day. Computed server-side in
+  // computeActivityFlags() off the real "14. Auto Activity" log, not off
+  // anything self-reported, so it can't be talked around from the form.
+  const flags = appData.activityFlags||[];
+  const flagsEl = document.getElementById('kpi-flags');
+  if (flagsEl) {
+    flagsEl.innerHTML = !flags.length ? '' : '<div class="alert-banner warn"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg><div><h4>'+flags.length+' filed report(s) with no matching tracked activity</h4><ul>'+flags.slice(0,10).map(f=>'<li>'+f['Team Member']+' — '+f.Date+'</li>').join('')+'</ul></div></div>';
+  }
+
+  // Auto-tracked activity — real task edits (status/% progress/proof link),
+  // logged server-side off the actual write, never off a text field. This
+  // is the "team can't lie about it" record; the EOD text field above is
+  // still there, it's just no longer the only source leaders can check.
+  const auto = appData.autoActivity||[];
+  const autoTbody = document.getElementById('auto-activity-tbody');
+  if (autoTbody) {
+    autoTbody.innerHTML = auto.map(a=>{
+      const t = a.Timestamp ? new Date(a.Timestamp) : null;
+      const ts = t && !isNaN(t) ? t.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}) : (a.Timestamp||'--');
+      return '<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+ts+'</td><td>'+(a['Team Member']||'--')+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.Task||a['Task ID']||'--')+'</td><td>'+(a.Field||'--')+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(a['Old Value']||'--')+' → '+(a['New Value']||'--')+'</td></tr>';
+    }).join('')||noDataRow(5,'No auto-tracked activity yet — this fills in as the team updates task status/progress.');
+  }
 }
 
 function renderMarketing() {
@@ -1923,7 +1957,16 @@ function renderFailsafe() {
 function renderAutomation() {
   const autos=appData.automations||[]; const canToggle=isLeader();
   document.getElementById('automation-grid').innerHTML=autos.map(a=>'<div class="auto-card '+(a.Enabled?'enabled':'disabled')+'"><div class="toggle-wrap"><div><h4>'+a.Label+'</h4><p>'+a.Description+'</p></div><label class="toggle"><input type="checkbox" '+(a.Enabled?'checked':'')+' '+(canToggle?'':'disabled')+' onchange="toggleAutomation(\''+a.Key+'\',this.checked)"><span class="slider"></span></label></div>'+(canToggle?'':'<div style="font-size:10px;color:var(--warn);font-family:Space Mono,monospace;margin-top:6px">Leader login required</div>')+'<div class="auto-meta ac-meta">Toggled: '+(a.LastToggled?(()=>{const d=new Date(a.LastToggled);return isNaN(d)?a.LastToggled:d.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false});})():'Never')+' by '+(a.ToggledBy||'--')+'</div></div>').join('');
-  document.getElementById('automation-tbody').innerHTML=autos.map(a=>'<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+a.Key+'</td><td>'+a.Label+'</td><td><span class="badge-pill '+(a.Enabled?'badge-green':'badge-gray')+'">'+(a.Enabled?'ON':'OFF')+'</span></td><td style="font-family:Space Mono,monospace;font-size:11px">'+(a.LastToggled||'--')+'</td><td>'+(a.ToggledBy||'--')+'</td></tr>').join('');
+  // Toggle history is leader-only — the server also withholds it from
+  // non-leader payloads (appData.automationLog comes back empty), this
+  // just hides the card itself rather than showing an empty table.
+  const logCard = document.getElementById('automation-log-card');
+  if (logCard) logCard.style.display = canToggle ? '' : 'none';
+  if (!canToggle) return;
+  document.getElementById('automation-tbody').innerHTML=(appData.automationLog||[]).map(l=>{
+    const d=new Date(l.Timestamp); const when=isNaN(d)?(l.Timestamp||'--'):d.toLocaleString('en-US',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
+    return '<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+when+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+l.Key+'</td><td>'+l.Label+'</td><td><span class="badge-pill '+(l.Enabled==='TRUE'||l.Enabled===true?'badge-green':'badge-gray')+'">'+(l.Enabled==='TRUE'||l.Enabled===true?'ON':'OFF')+'</span></td><td>'+(l.ToggledBy||'--')+'</td></tr>';
+  }).join('')||noDataRow(5,'No toggles logged yet — this fills in the first time a leader flips an automation switch.');
 }
 
 async function toggleAutomation(key,enabled) {
@@ -1956,6 +1999,7 @@ const TEAM_ROLES = {
   'Joshua Alex'    : { role:'Partnerships',       dept:'Partnerships' },
   'Mr Sam'         : { role:'Data & Research',    dept:'Data' },
   'Joshua (Tech)'  : { role:'Tech',               dept:'Technology' },
+  'Daniel Bowman'  : { role:'Leadership',         dept:'Leadership', leader:true },
 };
 function renderTeam() {
   if(!isLeader()){showToast('Leader login required','error');loadView('dashboard');return;}
@@ -2521,6 +2565,12 @@ function updateLeaderUI() {
   if(stb) stb.textContent=(document.documentElement.getAttribute('data-theme')==='light'?'🌙':'☀')+' Theme';
   const teamNav=document.getElementById('nav-team-item');
   if(teamNav) teamNav.style.display=show?'flex':'none';
+  const kpiNav=document.getElementById('nav-kpi-item');
+  if(kpiNav) kpiNav.style.display=show?'flex':'none';
+  // If a non-leader is sitting on the Activity Log view when their session
+  // ends (or never had access), bounce them out rather than leaving a now-
+  // hidden nav item as the only way back to a visible view.
+  if(!show && currentView==='kpi') loadView('dashboard');
 }
 
 // ============================================================
@@ -2676,7 +2726,8 @@ function generateForm() {
         +'<button type="button" class="btn-secondary" style="white-space:nowrap" onclick="requestShareLink()">Get Link</button>'
         +'</div><div id="drive-link-result" style="font-size:11px;color:var(--muted);margin-top:6px"></div>';
     } else {
-      input='<input type="'+field.type+'" class="form-input" name="'+escAttr(field.key)+'" value="'+escAttr(resolvedVal)+'" placeholder="'+(field.placeholder||'')+'"'+dis+ro+'>';
+      const minmax=(field.min!==undefined?' min="'+escAttr(field.min)+'"':'')+(field.max!==undefined?' max="'+escAttr(field.max)+'"':'');
+      input='<input type="'+field.type+'" class="form-input" name="'+escAttr(field.key)+'" value="'+escAttr(resolvedVal)+'" placeholder="'+(field.placeholder||'')+'"'+dis+ro+minmax+'>';
     }
     const lockLabel = immutable ? ' (fixed)' : locked ? ' (locked)' : '';
     body.innerHTML+='<div class="form-group'+((locked||immutable)?' field-locked':'')+'"><label>'+field.label+lockLabel+req+'</label>'+input+'</div>';
