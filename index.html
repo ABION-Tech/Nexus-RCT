@@ -270,6 +270,8 @@
     .chat-msg.mine .cm-author { color: #8880ff; }
     .chat-msg .cm-time { font-size: 9px; font-family: 'Space Mono', monospace; color: var(--muted); margin-top: 3px; }
     .chat-empty { text-align: center; color: var(--muted); font-size: 12px; padding: 30px 10px; }
+    .chat-thread-item:hover { background: rgba(255,255,255,0.04); }
+    .chat-tab:hover { color: var(--text); }
     #task-thread-wrap { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 14px; }
     #task-thread-msgs { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px 2px 10px; }
     #task-thread-input-row { display: flex; gap: 8px; align-items: flex-end; }
@@ -399,6 +401,8 @@
 
     /* LOGIN MODAL */
     #login-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    #ios-install-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    #ios-install-modal.show { display: flex; }
     #login-modal.show { display: flex; }
     #change-password-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
     #change-password-modal.show { display: flex; }
@@ -686,11 +690,22 @@
     <button class="btn-sm" onclick="teamLogoutClick()" title="Log out of chat" style="color:var(--danger)">Log out</button>
     <button class="btn-sm" id="chat-notify-btn" onclick="toggleChatNotifications()" style="margin-left:auto">🔔 Enable notifications</button>
   </div>
-  <div id="chat-messages" style="flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:10px"></div>
-  <div style="padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end">
-    <button class="btn-sm" title="Share a file" onclick="openAttachHelpModal('team')" style="flex-shrink:0">📎</button>
-    <textarea id="chat-input" class="form-input" rows="1" placeholder="Message the team…" style="resize:none;flex:1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTeamChatMessage();}"></textarea>
-    <button class="btn-primary" style="flex-shrink:0" onclick="sendTeamChatMessage()">Send</button>
+  <div id="chat-tabs" style="padding:8px 14px 0;border-bottom:1px solid var(--border);display:flex;gap:6px">
+    <button class="chat-tab active" data-tab="team" onclick="switchChatTab('team')" style="flex:1;background:none;border:none;border-bottom:2px solid var(--accent);color:var(--text);font-size:11px;font-weight:700;font-family:'Space Mono',monospace;padding:8px 4px;cursor:pointer">General</button>
+    <button class="chat-tab" data-tab="mine" onclick="switchChatTab('mine')" style="flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:11px;font-weight:700;font-family:'Space Mono',monospace;padding:8px 4px;cursor:pointer">My Task Chats</button>
+    <button class="chat-tab" data-tab="all" onclick="switchChatTab('all')" style="flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:11px;font-weight:700;font-family:'Space Mono',monospace;padding:8px 4px;cursor:pointer">All Task Chats</button>
+  </div>
+  <div id="chat-threads-list" style="display:none;flex:1;overflow-y:auto;padding:6px 10px"></div>
+  <div id="chat-thread-view" style="flex:1;display:flex;flex-direction:column;min-height:0">
+    <div id="chat-thread-back-row" style="display:none;padding:8px 18px 0">
+      <button class="btn-sm" onclick="backToThreadsList()">← Back to threads</button>
+    </div>
+    <div id="chat-messages" style="flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:10px"></div>
+    <div style="padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end">
+      <button class="btn-sm" title="Share a file" onclick="openAttachHelpModal('team')" style="flex-shrink:0">📎</button>
+      <textarea id="chat-input" class="form-input" rows="1" placeholder="Message the team…" style="resize:none;flex:1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatPanelMessage();}"></textarea>
+      <button class="btn-primary" style="flex-shrink:0" onclick="sendChatPanelMessage()">Send</button>
+    </div>
   </div>
 </div>
 
@@ -1421,6 +1436,12 @@ async function handleGoogleCredential(response) {
     if (r.error) { errEl.textContent = r.error; return; }
     setTeamSession(r.token, r.name, r.isLeader);
     closeLoginModal();
+    // Was missing: without this, a Google-signed-in leader stayed logged
+    // out visually — the topbar/sidebar "Login" button never flipped to
+    // their name and leader-only nav items (Team, Activity Log) stayed
+    // hidden — even though the session itself was valid and leader access
+    // worked once you reached a leader-gated action directly.
+    updateLeaderUI();
     updateChatIdentityLine();
     refreshChatBadge();
     showToast('Signed in as ' + r.name, 'success');
@@ -2186,13 +2207,20 @@ function updateChatIdentityLine() {
 }
 
 // ── Team chat panel ─────────────────────────────────────────
+// chatActiveTab: which tab is selected ('team' | 'mine' | 'all').
+// chatActiveTaskId: set when the person has drilled into one specific task
+// thread from the 'mine'/'all' list — null when looking at General or at
+// the thread list itself.
+let chatActiveTab = 'team';
+let chatActiveTaskId = null;
+let chatActiveTaskTitle = '';
+
 function openChatPanel() {
   if (!getIdentity()) { _pendingOpenChat = true; promptIdentity(true); return; }
   document.getElementById('chat-overlay').style.display = 'block';
   document.getElementById('chat-panel').style.transform = 'translateX(0)';
   updateChatIdentityLine();
-  loadTeamChat(true);
-  markChatReadRemote('team');
+  switchChatTab('team');
   refreshNotifyButtonState();
   startChatPolling();
 }
@@ -2203,9 +2231,121 @@ function closeChatPanel() {
 }
 function startChatPolling() {
   stopChatPolling();
-  chatPollInterval = setInterval(() => { loadTeamChat(false); refreshChatBadge(); }, 12000);
+  chatPollInterval = setInterval(() => {
+    if (chatActiveTaskId) loadActiveTaskThread(false);
+    else if (chatActiveTab === 'team') loadTeamChat(false);
+    else loadChatThreadsList(chatActiveTab === 'mine');
+    refreshChatBadge();
+  }, 12000);
 }
 function stopChatPolling() { if (chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval = null; } }
+
+// ── Chat tabs: General vs My Task Chats vs All Task Chats ──────
+function switchChatTab(tab) {
+  chatActiveTab = tab;
+  chatActiveTaskId = null;
+  document.querySelectorAll('#chat-tabs .chat-tab').forEach(b => {
+    const active = b.dataset.tab === tab;
+    b.classList.toggle('active', active);
+    b.style.color = active ? 'var(--text)' : 'var(--muted)';
+    b.style.borderBottomColor = active ? 'var(--accent)' : 'transparent';
+  });
+  const titleEl = document.querySelector('#chat-panel h3');
+  document.getElementById('chat-thread-back-row').style.display = 'none';
+  if (tab === 'team') {
+    if (titleEl) titleEl.textContent = '💬 Team Chat';
+    document.getElementById('chat-threads-list').style.display = 'none';
+    document.getElementById('chat-thread-view').style.display = 'flex';
+    document.getElementById('chat-input').placeholder = 'Message the team…';
+    loadTeamChat(true);
+    markChatReadRemote('team');
+  } else {
+    if (titleEl) titleEl.textContent = tab === 'mine' ? '💬 My Task Chats' : '💬 All Task Chats';
+    document.getElementById('chat-thread-view').style.display = 'none';
+    document.getElementById('chat-threads-list').style.display = 'block';
+    loadChatThreadsList(tab === 'mine');
+  }
+}
+
+async function loadChatThreadsList(mineOnly) {
+  const wrap = document.getElementById('chat-threads-list');
+  if (!getIdentity()) { wrap.innerHTML = '<div class="chat-empty">Log in (💬 Chat) to see task chats.</div>'; return; }
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getChatThreads&token=' + encodeURIComponent(getIdentityToken() || '') + '&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' });
+    const r = await res.json();
+    if (handleChatAuthError(r)) return;
+    let threads = r.threads || [];
+    if (mineOnly) threads = threads.filter(t => t.isMine);
+    if (!threads.length) {
+      wrap.innerHTML = '<div class="chat-empty">' + (mineOnly ? 'No task chats involving you yet.' : 'No task chats yet.') + '</div>';
+      return;
+    }
+    wrap.innerHTML = threads.map(t => {
+      const title = t.taskTitle || ('Task ' + t.taskId);
+      const preview = String(t.lastMessage || '').substring(0, 64);
+      const time = new Date(t.lastTimestamp).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, day: 'numeric', month: 'short' });
+      return '<div class="chat-thread-item" onclick="openThreadFromList(\'' + escQ(t.taskId) + '\',\'' + escQ(title) + '\')" style="padding:10px 8px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:flex-start">'
+        + '<div style="min-width:0;flex:1">'
+        + '<div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(title) + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(t.lastAuthor) + ': ' + escHtml(preview) + '</div>'
+        + '<div style="font-size:9px;font-family:\'Space Mono\',monospace;color:var(--muted);margin-top:2px">Assigned: ' + escHtml(t.assignedTo || '—') + ' · ' + time + '</div>'
+        + '</div>'
+        + (t.unread ? '<span class="badge-pill badge-red" style="flex-shrink:0">' + t.unread + '</span>' : '')
+        + '</div>';
+    }).join('');
+  } catch (e) { wrap.innerHTML = '<div class="chat-empty">Couldn\'t load task chats.</div>'; }
+}
+
+function openThreadFromList(taskId, title) {
+  chatActiveTaskId = taskId;
+  chatActiveTaskTitle = title;
+  document.getElementById('chat-threads-list').style.display = 'none';
+  document.getElementById('chat-thread-view').style.display = 'flex';
+  document.getElementById('chat-thread-back-row').style.display = 'block';
+  const titleEl = document.querySelector('#chat-panel h3');
+  if (titleEl) titleEl.textContent = '💬 ' + title;
+  document.getElementById('chat-input').placeholder = 'Comment on this task…';
+  loadActiveTaskThread(true);
+  markChatReadRemote(taskId);
+}
+
+function backToThreadsList() {
+  chatActiveTaskId = null;
+  document.getElementById('chat-thread-view').style.display = 'none';
+  document.getElementById('chat-threads-list').style.display = 'block';
+  const titleEl = document.querySelector('#chat-panel h3');
+  if (titleEl) titleEl.textContent = chatActiveTab === 'mine' ? '💬 My Task Chats' : '💬 All Task Chats';
+  loadChatThreadsList(chatActiveTab === 'mine');
+}
+
+async function loadActiveTaskThread(scrollToBottom) {
+  if (!chatActiveTaskId) return;
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getChatMessages&channel=task&taskId=' + encodeURIComponent(chatActiveTaskId) + '&token=' + encodeURIComponent(getIdentityToken() || '') + '&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' });
+    const r = await res.json();
+    if (handleChatAuthError(r)) return;
+    renderChatMessages(document.getElementById('chat-messages'), r.messages || []);
+    if (scrollToBottom) scrollChatToBottom('chat-messages');
+  } catch (e) { /* silent — polling will retry */ }
+}
+
+// Single send handler for the chat panel: posts to the active task thread
+// if one is open, otherwise to General.
+async function sendChatPanelMessage() {
+  if (!getIdentity()) { promptIdentity(true); return; }
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  const data = chatActiveTaskId ? { Channel: 'task', TaskID: chatActiveTaskId, Message: msg } : { Channel: 'team', Message: msg };
+  try {
+    const res = await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'sendChatMessage', token: getIdentityToken(), data: data }) });
+    const r = await res.json();
+    if (handleChatAuthError(r)) return;
+    if (r.error) { showToast(r.error, 'error'); return; }
+    if (chatActiveTaskId) loadActiveTaskThread(true); else loadTeamChat(true);
+  } catch (e) { showToast('Failed to send message', 'error'); }
+}
 
 async function loadTeamChat(scrollToBottom) {
   try {
@@ -3280,6 +3420,21 @@ document.addEventListener('click', e => {
 
 // ── PWA install prompt ────────────────────────────────────────
 let _deferredInstallPrompt = null;
+
+// iOS Safari never fires beforeinstallprompt (Apple doesn't support the
+// install-prompt API at all) — so without this, iPhone/iPad users never
+// see an Install button and have no path to "Add to Home Screen".
+// navigator.standalone is iOS Safari's own flag for "already installed".
+function isIosSafari() {
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && 'ontouchend' in document);
+  const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  return isIOS && isSafari;
+}
+function isStandalone() {
+  return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+}
+
 window.addEventListener('beforeinstallprompt', e => {
   // NOTE: intentionally NOT calling e.preventDefault() — this lets Chrome
   // show its own automatic install banner/omnibox icon. We still stash the
@@ -3294,6 +3449,14 @@ window.addEventListener('appinstalled', () => {
   if (btn) btn.style.display = 'none';
   showToast('NEXUS installed ✓', 'success');
 });
+// iOS never fires beforeinstallprompt, so show the Install button up front
+// there instead of waiting on an event that's never coming.
+if (isIosSafari() && !isStandalone()) {
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('btn-install-pwa');
+    if (btn) btn.style.display = 'inline-flex';
+  });
+}
 function downloadNexusHTML() {
   const html = '<!DOCTYPE html>' + document.documentElement.outerHTML;
   const blob = new Blob([html], { type: 'text/html' });
@@ -3305,8 +3468,26 @@ function downloadNexusHTML() {
   showToast('Downloading NEXUS.html…', 'success');
 }
 
+function showIosInstallModal() {
+  let m = document.getElementById('ios-install-modal');
+  if (m) { m.classList.add('show'); return; }
+  m = document.createElement('div');
+  m.id = 'ios-install-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  m.innerHTML = '<div style="background:var(--surface);border:1px solid rgba(0,212,160,0.3);border-radius:16px;padding:28px;width:300px;max-width:88vw;box-shadow:0 20px 60px rgba(0,0,0,0.6);text-align:center">'
+    + '<div style="font-size:32px;margin-bottom:10px">⬇</div>'
+    + '<h3 style="font-size:15px;font-weight:800;margin-bottom:10px">Install NEXUS</h3>'
+    + '<p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:18px">To install this app, tap the <strong style="color:var(--text)">Share</strong> button in Safari, then select <strong style="color:var(--text)">"Add to Home Screen."</strong></p>'
+    + '<button class="btn-primary" style="width:100%" onclick="document.getElementById(\'ios-install-modal\').classList.remove(\'show\')">Got it</button>'
+    + '</div>';
+  document.body.appendChild(m);
+  requestAnimationFrame(() => m.classList.add('show'));
+}
+
 function triggerPWAInstall() {
-  if (_deferredInstallPrompt) {
+  if (isIosSafari() && !isStandalone()) {
+    showIosInstallModal();
+  } else if (_deferredInstallPrompt) {
     _deferredInstallPrompt.prompt();
     _deferredInstallPrompt.userChoice.then(() => { _deferredInstallPrompt = null; });
   } else {
