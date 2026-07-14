@@ -1553,6 +1553,22 @@ function showCORSBanner(type) {
     existing.style.cssText = 'position:fixed;top:54px;left:0;right:0;z-index:200;padding:14px 20px;display:flex;align-items:flex-start;gap:14px;border-bottom:1px solid rgba(240,80,96,0.3);background:rgba(240,80,96,0.08);font-family:Space Mono,monospace;font-size:12px';
     document.body.appendChild(existing);
   }
+  // Regular team members shouldn't see internal deployment/setup details —
+  // just a plain "something's wrong, try again" with no technical noise.
+  // Only leaders (who can actually act on it) see the full diagnostic
+  // banner with the fix steps and debug buttons.
+  if (!isLeader()) {
+    existing.innerHTML = `
+      <span style="color:var(--danger);font-size:18px;flex-shrink:0">⚠</span>
+      <div style="flex:1">
+        <strong style="color:var(--danger);font-size:13px">Trouble loading data</strong><br>
+        <span style="color:var(--muted);font-size:11px">Check your connection and try again. If this keeps happening, let a leader know.</span>
+        <div style="margin-top:10px">
+          <button onclick="loadData()" style="background:rgba(240,80,96,0.2);border:1px solid rgba(240,80,96,0.4);color:var(--danger);border-radius:4px;padding:4px 12px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px">↻ Retry</button>
+        </div>
+      </div>`;
+    return;
+  }
   if (type === 'cors') {
     const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
     const fixMsg = isLocalhost
@@ -2311,6 +2327,7 @@ async function loadChatThreadsList(mineOnly) {
     const r = await res.json();
     if (handleChatAuthError(r)) return;
     let threads = r.threads || [];
+    threads = threads.filter(t => t.status !== 'Done');
     if (mineOnly) threads = threads.filter(t => t.isMine);
     if (!threads.length) {
       wrap.innerHTML = '<div class="chat-empty">' + (mineOnly ? 'No task chats involving you yet.' : 'No task chats yet.') + '</div>';
