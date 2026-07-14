@@ -3192,9 +3192,13 @@ function editRow(id,tab){
   if(tab==='1. Master Tasks' && !isLeader()){
     const row = findRowById(tab,id);
     const me = (getIdentity()||'').trim().toLowerCase();
-    const owner = row ? String(row['Assigned To']||'').trim().toLowerCase() : '';
+    // Was a strict single-string comparison — broke for multi-assignee
+    // tasks ("Ayo T. Joshua, Titi"), rejecting someone who genuinely was
+    // one of the assignees. Now splits on common separators like the
+    // server-side check and "My Tasks" filtering already do.
+    const owners = String(row && row['Assigned To']||'').split(/[,\/&+]+/).map(n=>n.trim().toLowerCase()).filter(Boolean);
     const isTrusted = ['chizaram'].includes(me); // mirrors TRUSTED_EDITORS server-side
-    if(row && owner && owner!==me && !isTrusted){
+    if(row && owners.length && !owners.includes(me) && !isTrusted){
       showToast("You can only edit tasks assigned to you.", 'error');
       return;
     }
