@@ -516,6 +516,10 @@
     <h2>NEX<span>US</span></h2>
     <p>Sign in with your Google account to continue.</p>
     <div id="google-signin-btn" style="display:flex;justify-content:center;margin:16px 0"></div>
+    <div id="google-signin-loading" style="display:none;align-items:center;justify-content:center;gap:8px;padding:10px 0;font-size:12px;color:var(--muted)">
+      <span style="width:14px;height:14px;border:2px solid rgba(255,255,255,0.2);border-top-color:var(--accent);border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>
+      Signing you in…
+    </div>
     <div id="google-signin-error"></div>
     <p style="font-size:11px;text-align:center;opacity:0.6;margin:14px 0 6px">
       Your Google account must be on the NEXUS team roster. Not added yet? Ask a leader.
@@ -1448,7 +1452,11 @@ function initGoogleSignIn() {
 
 async function handleGoogleCredential(response) {
   const errEl = document.getElementById('google-signin-error');
+  const loadingEl = document.getElementById('google-signin-loading');
+  const btnEl = document.getElementById('google-signin-btn');
   errEl.textContent = '';
+  loadingEl.style.display = 'flex';
+  btnEl.style.display = 'none';
   try {
     const res = await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'googleLogin', idToken: response.credential }) });
     const r = await res.json();
@@ -1468,6 +1476,7 @@ async function handleGoogleCredential(response) {
     await loadData();
     if (_pendingOpenChat) { _pendingOpenChat = false; openChatPanel(); }
   } catch (e) { errEl.textContent = 'Network error — try again.'; }
+  finally { loadingEl.style.display = 'none'; btnEl.style.display = 'flex'; }
 }
 
 // ============================================================
@@ -2012,7 +2021,7 @@ function renderAutomation() {
 
 async function toggleAutomation(key,enabled) {
   if(!isLeader()){showToast('Leader login required','error');return;}
-  try { const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify({action:'setAutomation',key,enabled,token:leaderToken})}); const r=await res.json(); if(r.error){showToast(r.error,'error');return;} showToast('Automation updated','success'); await loadData(); } catch(e){showToast('Failed','error');}
+  try { const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify({action:'setAutomation',key,enabled,token:getIdentityToken()||''})}); const r=await res.json(); if(r.error){showToast(r.error,'error');return;} showToast('Automation updated','success'); await loadData(); } catch(e){showToast('Failed','error');}
 }
 
 // ============================================================
@@ -2296,6 +2305,7 @@ function switchChatTab(tab) {
 async function loadChatThreadsList(mineOnly) {
   const wrap = document.getElementById('chat-threads-list');
   if (!getIdentity()) { wrap.innerHTML = '<div class="chat-empty">Log in (💬 Chat) to see task chats.</div>'; return; }
+  wrap.innerHTML = CHAT_SPINNER_HTML;
   try {
     const res = await fetch(SCRIPT_URL + '?action=getChatThreads&token=' + encodeURIComponent(getIdentityToken() || '') + '&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' });
     const r = await res.json();
@@ -2346,6 +2356,8 @@ function backToThreadsList() {
 
 async function loadActiveTaskThread(scrollToBottom) {
   if (!chatActiveTaskId) return;
+  const wrap = document.getElementById('chat-messages');
+  if (scrollToBottom && wrap) wrap.innerHTML = CHAT_SPINNER_HTML;
   try {
     const res = await fetch(SCRIPT_URL + '?action=getChatMessages&channel=task&taskId=' + encodeURIComponent(chatActiveTaskId) + '&token=' + encodeURIComponent(getIdentityToken() || '') + '&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' });
     const r = await res.json();
@@ -2373,7 +2385,13 @@ async function sendChatPanelMessage() {
   } catch (e) { showToast('Failed to send message', 'error'); }
 }
 
+const CHAT_SPINNER_HTML = '<div class="chat-empty" style="display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,0.15);border-top-color:var(--accent);border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>Loading…</div>';
 async function loadTeamChat(scrollToBottom) {
+  const wrap = document.getElementById('chat-messages');
+  // Only show the spinner on an actual open (scrollToBottom=true) — not on
+  // the silent 12s background poll, which would otherwise flash/reset the
+  // view every cycle.
+  if (scrollToBottom && wrap) wrap.innerHTML = CHAT_SPINNER_HTML;
   try {
     const res = await fetch(SCRIPT_URL + '?action=getChatMessages&channel=team&token=' + encodeURIComponent(getIdentityToken() || '') + '&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' });
     const r = await res.json();
@@ -2643,7 +2661,7 @@ async function updateTaskNotes(taskId, value, el) {
   if (!prev || prev.Notes === value) return; // no change
   el.disabled = true;
   try {
-    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({action:'updateTask', id:taskId, data:{...prev, Notes:value}, token:leaderToken||''})});
+    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({action:'updateTask', id:taskId, data:{...prev, Notes:value}, token:getIdentityToken()||''})});
     const r = await res.json();
     if (r.error) { showToast(r.error, 'error'); } else { prev.Notes = value; showToast('Notes saved', 'success'); }
   } catch(e) { showToast('Save failed: '+e.message, 'error'); }
@@ -3112,7 +3130,7 @@ async function submitAddMember() {
   btn.disabled = true; btn.textContent = 'Adding…';
   try {
     const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({
-      action:'addTeamMember', token:leaderToken||'',
+      action:'addTeamMember', token:getIdentityToken()||'',
       data:{ Name:name, Email:email, Role:role, Department:dept }
     })});
     const r = await res.json();
@@ -3147,7 +3165,7 @@ async function submitForm() {
       const headers=schema.fields.filter(f=>!f.section).map(f=>f.key);
       const rows=batchText.split('\n').map(line=>{const vals=line.split(',').map(v=>v.trim());const obj={};headers.forEach((h,i)=>obj[h]=vals[i]||'');return obj;}).filter(r=>Object.values(r).some(v=>v));
       if(!rows.length){showToast('No data to submit','error');return;}
-      const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify({action:'batchAppend',tabName:currentTab,rows,token:leaderToken||''})});
+      const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify({action:'batchAppend',tabName:currentTab,rows,token:getIdentityToken()||''})});
       const r=await res.json(); if(r.error){showToast(r.error,'error');return;} showToast('Added '+r.count+' rows','success');
     } else {
       const formData={}; body.querySelectorAll('.form-input:not([disabled])').forEach(el=>{if(el.name) formData[el.name]=el.value;});
@@ -3172,8 +3190,8 @@ async function submitForm() {
       if(missing.length){showToast('Required: '+missing.join(', '),'error');return;}
       const isNewTask = !editingRowId && currentTab==='1. Master Tasks';
       const payload=editingRowId
-        ?{action:(schema.updateAction||'updateRow'),tabName:currentTab,id:editingRowId,data:formData,token:leaderToken||''}
-        :{action:schema.appendAction,data:formData,token:leaderToken||'',...(isNewTask?{sendEmail:true}:{})};
+        ?{action:(schema.updateAction||'updateRow'),tabName:currentTab,id:editingRowId,data:formData,token:getIdentityToken()||''}
+        :{action:schema.appendAction,data:formData,token:getIdentityToken()||'',...(isNewTask?{sendEmail:true}:{})};
 
       const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
       const r=await res.json(); if(r.error){showToast(r.error,'error');return;} showToast(editingRowId?'Updated!':'Added!','success');
@@ -3216,7 +3234,7 @@ async function deleteRow() {
   btn.disabled = true;
   btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border:2px solid rgba(255,80,96,0.3);border-top-color:var(--danger);border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>Deleting…</span>';
   try {
-    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({action:'deleteRow', tabName:currentTab, id:editingRowId, token:leaderToken||''})});
+    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({action:'deleteRow', tabName:currentTab, id:editingRowId, token:getIdentityToken()||''})});
     const r = await res.json();
     if (r.error) { showToast(r.error, 'error'); btn.disabled=false; btn.innerHTML=origHTML; return; }
     showToast('Deleted successfully', 'success');
@@ -3237,7 +3255,7 @@ async function resendAssignment() {
   btn.disabled = true;
   btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border:2px solid rgba(255,255,255,0.2);border-top-color:#8880ff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>Sending…</span>';
   try {
-    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({action:'resendAssignment', id:editingRowId, token:leaderToken||''})});
+    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({action:'resendAssignment', id:editingRowId, token:getIdentityToken()||''})});
     const r = await res.json();
     if (r.error) { showToast(r.error, 'error'); }
     else { showToast('Assignment email resent ✓', 'success'); }
