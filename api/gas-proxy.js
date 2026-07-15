@@ -53,6 +53,7 @@ export default async function handler(req, res) {
       res.status(gasRes.status).send(text);
       return;
     }
+    
 
     res.status(405).send('Method not allowed');
   } catch (e) {
