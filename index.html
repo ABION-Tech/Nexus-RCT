@@ -1314,7 +1314,7 @@ const FORM_SCHEMAS = {
 // Name → email map — update emails here to match your team
 const TEAM_EMAILS = {
   'Ayo T. Joshua'           : 'othnielemry@gmail.com',
-  'Shina Samson'            : 'abionnexus@gmail.com',
+  'Shina Samson'            : 'rothimmyshiloh@gmail.com',
   'Israel Idowu'            : 'abionindustries@gmail.com',
   'Darlington'              : 'newageskillsphere@gmail.com',
   'Chizaram'                : 'abionplc@gmail.com',
@@ -1766,7 +1766,10 @@ function renderTasks() {
   document.getElementById('nav-badge-tasks').textContent = (appData.tasks||[]).filter(t=>!['Done','Cancelled'].includes(t.Status)).length;
   document.getElementById('tasks-tbody').innerHTML = tasks.map(t=>{
     const stale=taskStaleDays(t); const sw=stale>=2&&!['Done','Cancelled'].includes(t.Status)?'<span class="badge-pill badge-red" style="margin-left:4px">'+stale+'d</span>':'';
-    return '<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+sw+depChipsHtml(t)+'</td><td>'+priorityBadge(t.Priority)+'</td><td>'+t['Assigned To']+'</td><td>'+(t['Support Person']||'--')+'</td><td>'+(t['Business / Dept']||'--')+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(t.Deadline||'--')+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Edit</button></td></tr>';
+    const isOver=t.Deadline&&!['Done','Cancelled'].includes(t.Status)&&new Date(t.Deadline)<new Date(new Date().toDateString());
+    const dlStyle = isOver ? 'color:var(--danger);font-weight:700;cursor:pointer;text-decoration:underline dotted' : 'cursor:pointer;text-decoration:underline dotted;color:var(--muted)';
+    const dlTitle = t.Deadline ? (isOver ? 'OVERDUE — click to edit' : 'Click to edit deadline') : '';
+    return '<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+sw+depChipsHtml(t)+'</td><td>'+priorityBadge(t.Priority)+'</td><td>'+t['Assigned To']+'</td><td>'+(t['Support Person']||'--')+'</td><td>'+(t['Business / Dept']||'--')+'</td><td style="font-family:Space Mono,monospace;font-size:11px;'+dlStyle+'" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" title="'+dlTitle+'">'+(t.Deadline||'--')+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Edit</button></td></tr>';
   }).join('')||noDataRow(10,'No tasks');
 }
 
@@ -1995,7 +1998,7 @@ function renderFollowup() {
   document.getElementById('nav-badge-followup').textContent=stale.length+opd.length;
   document.getElementById('fu-overdue-list').innerHTML=stale.slice(0,5).map(t=>'<div class="followup-item"><span>'+t['Assigned To']+'</span><span class="badge-pill badge-red">'+taskStaleDays(t)+'d</span></div>').join('')||'<p style="color:var(--muted);font-size:12px">No overdue tasks</p>';
   document.getElementById('fu-partners-list').innerHTML=opd.slice(0,5).map(p=>'<div class="followup-item"><span>'+p.Organisation+'</span><span class="badge-pill badge-yellow">'+daysSince(p['Follow-Up Date'])+'d</span></div>').join('')||'<p style="color:var(--muted);font-size:12px">All partners up to date</p>';
-  document.getElementById('followup-tbody').innerHTML=stale.map(t=>'<tr><td>'+t['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+'</td><td><span class="badge-pill badge-red">'+taskStaleDays(t)+'d</span></td><td>'+statusBadge(t.Status)+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(t.Last_Updated||t['Start Date']||'--')+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Update</button></td></tr>').join('')||noDataRow(7,'No stale tasks');
+  document.getElementById('followup-tbody').innerHTML=stale.map(t=>'<tr style="cursor:pointer" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" title="Click to update task"><td>'+t['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+'</td><td><span class="badge-pill badge-red">'+taskStaleDays(t)+'d</span></td><td>'+statusBadge(t.Status)+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(t.Last_Updated||t['Start Date']||'--')+'</td><td><button class="btn-sm" onclick="event.stopPropagation();editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Update</button></td></tr>').join('')||noDataRow(7,'No stale tasks');
 }
 
 // ============================================================
@@ -2010,7 +2013,7 @@ function renderFailsafe() {
   const blocked=tasks.filter(t=>t.Status==='Blocked');
   document.getElementById('failsafe-blocked-tbody').innerHTML=blocked.map(t=>'<tr><td>'+t['Task Description']+'</td><td>'+t['Assigned To']+'</td><td><span class="badge-pill badge-red">'+taskStaleDays(t)+'d</span></td><td><button class="btn-sm danger" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Resolve</button></td></tr>').join('')||noDataRow(4,'No blocked tasks');
   const overDead=tasks.filter(t=>t.Deadline&&!['Done','Cancelled'].includes(t.Status)&&new Date(t.Deadline)<today);
-  document.getElementById('failsafe-deadlines-tbody').innerHTML=overDead.map(t=>'<tr><td>'+t['Task Description']+'</td><td>'+t['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+t.Deadline+'</td><td><span class="badge-pill badge-red">'+daysSince(t.Deadline)+'d</span></td></tr>').join('')||noDataRow(4,'No overdue deadlines');
+  document.getElementById('failsafe-deadlines-tbody').innerHTML=overDead.map(t=>'<tr style="cursor:pointer" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" title="Click to open task"><td>'+t['Task Description']+'</td><td>'+t['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+t.Deadline+'</td><td><span class="badge-pill badge-red">'+daysSince(t.Deadline)+'d late</span></td></tr>').join('')||noDataRow(4,'No overdue deadlines');
   const staleP=partners.filter(p=>p['Follow-Up Date']&&daysSince(p['Follow-Up Date'])>=7&&!['Active','Declined'].includes(p['Current Status']));
   document.getElementById('failsafe-partners-tbody').innerHTML=staleP.map(p=>'<tr><td><strong>'+p.Organisation+'</strong></td><td>'+p['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+p['Follow-Up Date']+'</td><td>'+statusBadge(p['Current Status'])+'</td></tr>').join('')||noDataRow(4,'No stale partners');
   const total=missingEOD.length+blocked.length+overDead.length+staleP.length;
@@ -2188,15 +2191,49 @@ const VAPID_PUBLIC_KEY = 'BHFmgTMYXgMWbuyaZ1x_gVSvkzD_WJyE2IVq6UwJv4KsGKKP38-_eP
 
 let chatPollInterval = null;
 let _pendingOpenChat = false;
+let chatPanelOpen = false;
 
 // Chat identity is a real per-person login (PIN-protected), not a free-pick
 // name — the server resolves "who is this" from teamToken/leaderToken, it
-// never trusts a name the client sends. Session persists ~30 days (server-
-// enforced expiry), so people don't have to re-enter their PIN constantly.
+// never trusts a name the client sends. Session persists ~14 days
+// (server-enforced expiry) or until IDLE_TIMEOUT_MINUTES of inactivity,
+// whichever comes first.
 function getTeamToken()  { return localStorage.getItem('nexus_team_token'); }
 function getTeamName()   { return localStorage.getItem('nexus_team_name'); }
 function setTeamSession(token, name, isLeaderFlag) { localStorage.setItem('nexus_team_token', token); localStorage.setItem('nexus_team_name', name); localStorage.setItem('nexus_team_isleader', isLeaderFlag ? '1' : ''); }
 function clearTeamSession() { localStorage.removeItem('nexus_team_token'); localStorage.removeItem('nexus_team_name'); localStorage.removeItem('nexus_team_isleader'); }
+
+// ── Idle auto-logout ────────────────────────────────────────────
+// Sessions used to just sit there for up to 30 days with no activity
+// check — a tab left open (or forgotten) kept polling chat + loading data
+// indefinitely, which is exactly what eats into the Apps Script daily
+// quota. After IDLE_TIMEOUT_MINUTES of no clicks/typing/scrolling, the
+// local session is cleared and the login modal reopens, same as a manual
+// sign-out. This only affects the client — the server-side token still
+// naturally expires on its own schedule regardless.
+const IDLE_TIMEOUT_MINUTES = 45;
+let lastActivityAt = Date.now();
+['click', 'keydown', 'mousemove', 'touchstart', 'scroll'].forEach(evt => {
+  window.addEventListener(evt, () => { lastActivityAt = Date.now(); }, { passive: true });
+});
+setInterval(() => {
+  if (!getIdentity()) return; // nobody logged in — nothing to expire, and no need to check
+  if (Date.now() - lastActivityAt >= IDLE_TIMEOUT_MINUTES * 60 * 1000) handleIdleLogout();
+}, 60000); // a once-a-minute check is local/free — no network call involved
+
+function handleIdleLogout() {
+  lastActivityAt = Date.now(); // avoid firing again immediately
+  stopChatPolling();
+  clearTeamSession();
+  leaderToken = null; leaderName = null;
+  sessionStorage.removeItem('nexus_leader_token'); sessionStorage.removeItem('nexus_leader_name');
+  updateLeaderUI();
+  updateChatIdentityLine();
+  refreshChatBadge();
+  showToast("Signed out after " + IDLE_TIMEOUT_MINUTES + " minutes of inactivity — please log in again.", '');
+  document.getElementById('login-modal').classList.add('show');
+  initGoogleSignIn();
+}
 
 // Leaders are already authenticated via their own session — treat that as
 // identity too so they don't need a separate chat login.
@@ -2266,6 +2303,7 @@ function openChatPanel() {
   if (!getIdentity()) { _pendingOpenChat = true; promptIdentity(true); return; }
   document.getElementById('chat-overlay').style.display = 'block';
   document.getElementById('chat-panel').style.transform = 'translateX(0)';
+  chatPanelOpen = true;
   updateChatIdentityLine();
   switchChatTab('team');
   refreshNotifyButtonState();
@@ -2274,8 +2312,16 @@ function openChatPanel() {
 function closeChatPanel() {
   document.getElementById('chat-overlay').style.display = 'none';
   document.getElementById('chat-panel').style.transform = 'translateX(100%)';
+  chatPanelOpen = false;
   stopChatPolling();
 }
+// Pause chat polling while the tab is backgrounded/minimized — a hidden
+// tab has no reason to keep hitting Apps Script every 12s. Resumes right
+// where it left off when you come back.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { stopChatPolling(); }
+  else if (chatPanelOpen && getIdentity()) { startChatPolling(); }
+});
 function startChatPolling() {
   stopChatPolling();
   chatPollInterval = setInterval(() => {
@@ -3329,33 +3375,37 @@ function calISODate(y, m, d) {
 }
 
 function buildCalEvents() {
-  // Returns a map: 'YYYY-MM-DD' -> [{type, color, title, meta}]
+  // Returns a map: 'YYYY-MM-DD' -> [{type, color, title, meta, taskId?, meetingId?}]
+  // taskId/meetingId power the "click event to open task/meeting" UX in the popover.
   const evMap = {};
   const add = (iso, ev) => { if (!evMap[iso]) evMap[iso] = []; evMap[iso].push(ev); };
 
-  // Task deadlines
+  // Task deadlines — include taskId so popover can editRow() directly
   (appData.tasks || []).forEach(t => {
     if (!t.Deadline) return;
     const iso = String(t.Deadline).slice(0,10);
+    const isOverdue = new Date(iso) < new Date(new Date().toDateString());
     add(iso, {
-      type: 'deadline',
-      color: '#f05060',
-      title: t['Task Description'] || t.ID || 'Task',
-      meta: (t['Assigned To'] || '') + (t.Priority ? ' · ' + t.Priority : '')
+      type  : 'deadline',
+      color : isOverdue ? '#ff3333' : '#f05060',
+      title : t['Task Description'] || t.ID || 'Task',
+      meta  : (t['Assigned To'] || '') + (t.Priority ? ' · ' + t.Priority : '') + (isOverdue ? ' · OVERDUE' : ''),
+      taskId: t.ID,  // ← enables click-to-open in popover
     });
   });
 
-  // Meetings
+  // Meetings — include meetingId so popover can navigate to meetings view
   (appData.meetings || []).forEach(m => {
     if (!m.Date) return;
     const iso = String(m.Date).slice(0,10);
-    const mtype = (m.Type || m['Meeting Type'] || '').toLowerCase();
-    const color = mtype.includes('zoom') ? '#2d8cff' : mtype.includes('meet') ? '#00c367' : '#f0a030';
+    const locType = (m.Location_Type || m.Type || m['Meeting Type'] || '').toLowerCase();
+    const color = locType.includes('zoom') ? '#2d8cff' : locType.includes('meet') ? '#00c367' : '#f0a030';
     add(iso, {
-      type: 'meeting',
+      type     : 'meeting',
       color,
-      title: m.Title || m.Topic || 'Meeting',
-      meta: (m.Time ? m.Time + ' · ' : '') + (m.Type || m['Meeting Type'] || 'Meeting')
+      title    : m.Title || m.Topic || 'Meeting',
+      meta     : (m.Time ? m.Time + ' · ' : '') + (m.Location_Type || m['Meeting Type'] || 'Meeting'),
+      meetingId: m.Meeting_ID,  // ← enables click-to-navigate in popover
     });
   });
 
@@ -3422,13 +3472,21 @@ function calDayClick(iso, evt) {
   document.getElementById('cal-pop-date').textContent =
     d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
 
-  document.getElementById('cal-pop-events').innerHTML = events.map(e =>
-    '<div class="cal-pop-event">'
-    + '<div class="cal-pop-dot" style="background:'+e.color+'"></div>'
-    + '<div class="cal-pop-info"><div class="cal-pop-title">'+e.title+'</div>'
-    + (e.meta ? '<div class="cal-pop-meta">'+e.meta+'</div>' : '')
-    + '</div></div>'
-  ).join('');
+  // Each event is clickable — tasks open the edit drawer, meetings open the list tab
+  document.getElementById('cal-pop-events').innerHTML = events.map(e => {
+    const clickAttr = e.taskId
+      ? ' onclick="document.getElementById(\'cal-popover\').style.display=\'none\';editRow(\''+escQ(e.taskId)+'\',\'1. Master Tasks\')" style="cursor:pointer"'
+      : e.meetingId
+        ? ' onclick="document.getElementById(\'cal-popover\').style.display=\'none\';loadView(\'meetings\');setTimeout(()=>switchMtgTab(\'list\'),80)" style="cursor:pointer"'
+        : '';
+    const hint = e.taskId ? '<span style="font-size:9px;color:var(--accent);font-family:Space Mono,monospace;margin-top:2px;display:block">Click to open task →</span>' : '';
+    return '<div class="cal-pop-event"'+clickAttr+'>'
+      + '<div class="cal-pop-dot" style="background:'+e.color+'"></div>'
+      + '<div class="cal-pop-info"><div class="cal-pop-title">'+e.title+'</div>'
+      + (e.meta ? '<div class="cal-pop-meta">'+e.meta+'</div>' : '')
+      + hint
+      + '</div></div>';
+  }).join('');
 
   // Position popover near clicked cell, keep inside viewport
   const rect = evt.currentTarget.getBoundingClientRect();
