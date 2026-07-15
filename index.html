@@ -712,11 +712,12 @@
     <button class="btn-sm" onclick="promptIdentity(true)" title="Switch who you're logged in as">Switch account</button>
     <button class="btn-sm" onclick="teamLogoutClick()" title="Log out of chat" style="color:var(--danger)">Log out</button>
     <button class="btn-sm" id="chat-notify-btn" onclick="toggleChatNotifications()" style="margin-left:auto">🔔 Enable notifications</button>
+    <button class="btn-sm" onclick="clearAllChatNotifications()" title="Mark General + all my task chats as read">✓ Clear</button>
   </div>
   <div id="chat-tabs" style="padding:8px 14px 0;border-bottom:1px solid var(--border);display:flex;gap:6px">
-    <button class="chat-tab active" data-tab="team" onclick="switchChatTab('team')" style="flex:1;background:none;border:none;border-bottom:2px solid var(--accent);color:var(--text);font-size:11px;font-weight:700;font-family:'Space Mono',monospace;padding:8px 4px;cursor:pointer">General</button>
-    <button class="chat-tab" data-tab="mine" onclick="switchChatTab('mine')" style="flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:11px;font-weight:700;font-family:'Space Mono',monospace;padding:8px 4px;cursor:pointer">My Task Chats</button>
-    <button class="chat-tab" data-tab="all" onclick="switchChatTab('all')" style="flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:11px;font-weight:700;font-family:'Space Mono',monospace;padding:8px 4px;cursor:pointer">All Task Chats</button>
+    <button class="chat-tab active" data-tab="team" onclick="switchChatTab('team')" style="flex:1;background:none;border:none;border-bottom:2px solid var(--accent);color:var(--text);font-size:11px;font-weight:700;font-family:'Space Mono',monospace;padding:8px 4px;cursor:pointer">General<span class="chat-tab-dot" id="chat-tab-dot-team" style="display:none;width:6px;height:6px;border-radius:50%;background:var(--danger);margin-left:5px;vertical-align:middle"></span></button>
+    <button class="chat-tab" data-tab="mine" onclick="switchChatTab('mine')" style="flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:11px;font-weight:700;font-family:'Space Mono',monospace;padding:8px 4px;cursor:pointer">My Task Chats<span class="chat-tab-dot" id="chat-tab-dot-mine" style="display:none;width:6px;height:6px;border-radius:50%;background:var(--danger);margin-left:5px;vertical-align:middle"></span></button>
+    <button class="chat-tab" data-tab="all" onclick="switchChatTab('all')" style="flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:11px;font-weight:700;font-family:'Space Mono',monospace;padding:8px 4px;cursor:pointer">All Task Chats<span class="chat-tab-dot" id="chat-tab-dot-all" style="display:none;width:6px;height:6px;border-radius:50%;background:var(--danger);margin-left:5px;vertical-align:middle"></span></button>
   </div>
   <div id="chat-threads-list" style="display:none;flex:1;overflow-y:auto;padding:6px 10px"></div>
   <div id="chat-thread-view" style="flex:1;display:flex;flex-direction:column;min-height:0">
@@ -937,6 +938,21 @@
             <option value="HIGH">HIGH</option>
             <option value="MEDIUM">MEDIUM</option>
             <option value="LOW">LOW</option>
+          </select>
+          <label>Dept</label>
+          <select id="task-filter-dept" class="filter-input" onchange="renderTasks()" style="max-width:120px">
+            <option value="">All</option>
+            <option value="COS">COS</option>
+            <option value="Partnerships">Partnerships</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Product">Product</option>
+            <option value="Operations">Operations</option>
+            <option value="Finance">Finance</option>
+            <option value="HR">HR</option>
+          </select>
+          <label>Support</label>
+          <select id="task-filter-support" class="filter-input" onchange="renderTasks()" style="max-width:130px">
+            <option value="">All</option>
           </select>
           <button class="filter-clear" onclick="clearTaskFilters()">✕ Clear</button>
           <span class="filter-count" id="tasks-filter-count"></span>
@@ -1396,6 +1412,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Populate task owner filter select
   const ownerSel = document.getElementById('task-filter-owner');
   ALL_TEAM_MEMBERS.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; ownerSel.appendChild(o); });
+  const supportSel = document.getElementById('task-filter-support');
+  if (supportSel) ALL_TEAM_MEMBERS.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; supportSel.appendChild(o); });
   const savedWho = localStorage.getItem('nexus_eod_who');
   if (savedWho) eodSel.value = savedWho;
 
@@ -1654,6 +1672,22 @@ function daysSince(ds) { if(!ds) return null; const d=new Date(ds); return isNaN
 function taskStaleDays(t) { const ref=t['Last_Updated']||t['Start Date']; const d=daysSince(ref); return d===null?999:d; }
 function statusBadge(s) { const m={'Not Started':'badge-gray','In Progress':'badge-blue','Done':'badge-green','Cancelled':'badge-gray','Blocked':'badge-red','Active':'badge-green','Pending':'badge-yellow','MoU Pending':'badge-yellow','In Discussion':'badge-blue','Cold':'badge-gray','Draft Sent':'badge-orange','Signed':'badge-green','Declined':'badge-red','In Review':'badge-yellow','Scheduled':'badge-teal','Y':'badge-green','N':'badge-red'}; return '<span class="badge-pill '+(m[s]||'badge-gray')+'">'+( s||'--')+'</span>'; }
 function priorityBadge(p) { const m={'URGENT':'badge-red','HIGH':'badge-red','MEDIUM':'badge-yellow','LOW':'badge-green'}; return '<span class="badge-pill '+(m[p]||'badge-gray')+'">'+(p||'--')+'</span>'; }
+// Shared deadline display for in-app task views — same intent as the email's
+// formatDeadline() in CODE.GS: a bare date is ambiguous (does it mean 9am?
+// EOD?), so always show the time when Deadline_Time is set, and flag it
+// clearly when it isn't (since the calendar event still defaults to 9:00 AM
+// either way, whether or not the person picked a time).
+function fmtDeadline(t, compact) {
+  if (!t || !t.Deadline) return '--';
+  const timeStr = t.Deadline_Time;
+  if (timeStr && /^\d{1,2}:\d{2}/.test(String(timeStr))) {
+    let [h, m] = String(timeStr).split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return t.Deadline + ' · ' + h + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+  }
+  return t.Deadline + (compact ? ' · def. 9am' : ' (no time set — defaults to 9:00 AM)');
+}
 // Renders one small pill per "Depends On" task ID: green if that task is Done,
 // red if still open, gray if the ID isn't found (typo/removed task).
 function depChipsHtml(t) {
@@ -1713,7 +1747,7 @@ function renderDashboard() {
   if(overdue>0) alerts.push('<div class="alert-banner warn"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg><div><h4>'+overdue+' task(s) not updated in 2+ days</h4><p><button class="btn-sm" onclick="loadView(&apos;followup&apos;)" style="display:inline">View Follow-Ups</button></p></div></div>');
   document.getElementById('dashboard-alerts').innerHTML = alerts.join('');
   const recentTasks = [...tasks].sort((a,b)=>(b.Last_Updated||b.ID||'').localeCompare(a.Last_Updated||a.ID||''));
-  document.getElementById('dash-tasks-tbody').innerHTML = recentTasks.slice(0,6).map(t=>'<tr onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" style="cursor:pointer"><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+'</td><td>'+t['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(t.Deadline||'--')+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td>'+(t.Notes||'--')+'</td></tr>').join('')||noDataRow(7,'No tasks. Sync or add one.');
+  document.getElementById('dash-tasks-tbody').innerHTML = recentTasks.slice(0,6).map(t=>'<tr onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" style="cursor:pointer"><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+'</td><td>'+t['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+fmtDeadline(t,true)+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td>'+(t.Notes||'--')+'</td></tr>').join('')||noDataRow(7,'No tasks. Sync or add one.');
   document.getElementById('dash-automations').innerHTML = autos.slice(0,4).map(a=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;font-weight:600">'+a.Label+'</span><span class="badge-pill '+(a.Enabled?'badge-green':'badge-gray')+'">'+(a.Enabled?'ON':'OFF')+'</span></div>').join('')||'<p style="color:var(--muted);font-size:12px">No automation data</p>';
 }
 
@@ -1728,6 +1762,8 @@ function clearTaskFilters() {
   const o=document.getElementById('task-filter-owner');
   if(o) o.value = localStorage.getItem('nexus_eod_who') || '';
   const p=document.getElementById('task-filter-priority');if(p) p.value='';
+  const d=document.getElementById('task-filter-dept'); if(d) d.value='';
+  const sp=document.getElementById('task-filter-support'); if(sp) sp.value='';
   renderTasks();
 }
 function clearOwnerFilter() {
@@ -1746,6 +1782,8 @@ function renderTasks() {
   const fStatus  =(document.getElementById('task-filter-status')  ||{}).value||'';
   const fOwner   =(ownerSel||{}).value||'';
   const fPriority=(document.getElementById('task-filter-priority')||{}).value||'';
+  const fDept    =(document.getElementById('task-filter-dept')||{}).value||'';
+  const fSupport =(document.getElementById('task-filter-support')||{}).value||'';
   if(fSearch.trim()){
     const q=fSearch.trim().toLowerCase();
     tasks=tasks.filter(t=>[t.ID,t['Task Description'],t['Assigned To'],t['Support Person'],t['Business / Dept'],t.Notes].some(v=>String(v??'').toLowerCase().includes(q)));
@@ -1753,8 +1791,10 @@ function renderTasks() {
   if(fStatus)   tasks=tasks.filter(t=>t.Status===fStatus);
   if(fOwner)    tasks=tasks.filter(t=>String(t['Assigned To']??'').split(/[,\/&+]+/).map(n=>n.trim().toLowerCase()).includes(fOwner.trim().toLowerCase())); // split multi-assignee field and check if selected name is one of them
   if(fPriority) tasks=tasks.filter(t=>t.Priority===fPriority);
+  if(fDept)     tasks=tasks.filter(t=>t['Business / Dept']===fDept);
+  if(fSupport)  tasks=tasks.filter(t=>String(t['Support Person']??'').split(/[,\/&+]+/).map(n=>n.trim().toLowerCase()).includes(fSupport.trim().toLowerCase()));
   const fc=document.getElementById('tasks-filter-count');
-  if(fc) fc.textContent=(fSearch||fStatus||fOwner||fPriority)?tasks.length+' shown':'';
+  if(fc) fc.textContent=(fSearch||fStatus||fOwner||fPriority||fDept||fSupport)?tasks.length+' shown':'';
   const sort=(document.getElementById('task-sort')||{}).value||'newest';
   const priOrd={URGENT:0,HIGH:1,MEDIUM:2,LOW:3};
   if(sort==='newest')       tasks.sort((a,b)=>(b.Last_Updated||b.ID||'').localeCompare(a.Last_Updated||a.ID||''));
@@ -1769,7 +1809,7 @@ function renderTasks() {
     const isOver=t.Deadline&&!['Done','Cancelled'].includes(t.Status)&&new Date(t.Deadline)<new Date(new Date().toDateString());
     const dlStyle = isOver ? 'color:var(--danger);font-weight:700;cursor:pointer;text-decoration:underline dotted' : 'cursor:pointer;text-decoration:underline dotted;color:var(--muted)';
     const dlTitle = t.Deadline ? (isOver ? 'OVERDUE — click to edit' : 'Click to edit deadline') : '';
-    return '<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+sw+depChipsHtml(t)+'</td><td>'+priorityBadge(t.Priority)+'</td><td>'+t['Assigned To']+'</td><td>'+(t['Support Person']||'--')+'</td><td>'+(t['Business / Dept']||'--')+'</td><td style="font-family:Space Mono,monospace;font-size:11px;'+dlStyle+'" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" title="'+dlTitle+'">'+(t.Deadline||'--')+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Edit</button></td></tr>';
+    return '<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+sw+depChipsHtml(t)+'</td><td>'+priorityBadge(t.Priority)+'</td><td>'+t['Assigned To']+'</td><td>'+(t['Support Person']||'--')+'</td><td>'+(t['Business / Dept']||'--')+'</td><td style="font-family:Space Mono,monospace;font-size:11px;'+dlStyle+'" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" title="'+dlTitle+'">'+fmtDeadline(t,true)+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Edit</button></td></tr>';
   }).join('')||noDataRow(10,'No tasks');
 }
 
@@ -1974,7 +2014,10 @@ function checkMeetingNotifications() {
   const who=localStorage.getItem('nexus_eod_who'); if(!who) return;
   const meetings=appData.meetings||[]; const now=new Date();
   const relevant=meetings.filter(m=>{ const d=new Date(m.Date); const diff=Math.floor((d-now)/86400000); return diff>=0&&diff<=7&&(m.Team_Invitees||'').includes(who); });
-  const dismissed=JSON.parse(sessionStorage.getItem('nexus_dismissed_mtgs')||'[]');
+  // Was sessionStorage — cleared every time a tab was closed, so anyone in
+  // the habit of closing tabs down saw the same "seen" meeting notifications
+  // resurface on their next visit. localStorage persists the dismissal for real.
+  const dismissed=JSON.parse(localStorage.getItem('nexus_dismissed_mtgs')||'[]');
   const unseen=relevant.filter(m=>!dismissed.includes(m.Meeting_ID));
   if(!unseen.length) return;
   document.getElementById('notify-meeting-list').innerHTML=unseen.slice(0,3).map(m=>'<li>'+m.Title+' - '+m.Date+' '+(m.Time||'')+'</li>').join('');
@@ -1984,7 +2027,11 @@ function checkMeetingNotifications() {
 function dismissMeetingNotify() {
   const who=localStorage.getItem('nexus_eod_who')||''; const now=new Date();
   const ids=(appData.meetings||[]).filter(m=>{ const d=new Date(m.Date); return Math.floor((d-now)/86400000)>=0&&(m.Team_Invitees||'').includes(who); }).map(m=>m.Meeting_ID);
-  sessionStorage.setItem('nexus_dismissed_mtgs',JSON.stringify(ids));
+  // Merge with any already-dismissed IDs rather than overwrite, so a
+  // dismissal from a previous session isn't lost.
+  const prev=JSON.parse(localStorage.getItem('nexus_dismissed_mtgs')||'[]');
+  const merged=[...new Set([...prev, ...ids])];
+  localStorage.setItem('nexus_dismissed_mtgs',JSON.stringify(merged));
   document.getElementById('meeting-notify-banner').classList.remove('show');
 }
 
@@ -2013,7 +2060,7 @@ function renderFailsafe() {
   const blocked=tasks.filter(t=>t.Status==='Blocked');
   document.getElementById('failsafe-blocked-tbody').innerHTML=blocked.map(t=>'<tr><td>'+t['Task Description']+'</td><td>'+t['Assigned To']+'</td><td><span class="badge-pill badge-red">'+taskStaleDays(t)+'d</span></td><td><button class="btn-sm danger" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Resolve</button></td></tr>').join('')||noDataRow(4,'No blocked tasks');
   const overDead=tasks.filter(t=>t.Deadline&&!['Done','Cancelled'].includes(t.Status)&&new Date(t.Deadline)<today);
-  document.getElementById('failsafe-deadlines-tbody').innerHTML=overDead.map(t=>'<tr style="cursor:pointer" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" title="Click to open task"><td>'+t['Task Description']+'</td><td>'+t['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+t.Deadline+'</td><td><span class="badge-pill badge-red">'+daysSince(t.Deadline)+'d late</span></td></tr>').join('')||noDataRow(4,'No overdue deadlines');
+  document.getElementById('failsafe-deadlines-tbody').innerHTML=overDead.map(t=>'<tr style="cursor:pointer" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" title="Click to open task"><td>'+t['Task Description']+'</td><td>'+t['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+fmtDeadline(t,true)+'</td><td><span class="badge-pill badge-red">'+daysSince(t.Deadline)+'d late</span></td></tr>').join('')||noDataRow(4,'No overdue deadlines');
   const staleP=partners.filter(p=>p['Follow-Up Date']&&daysSince(p['Follow-Up Date'])>=7&&!['Active','Declined'].includes(p['Current Status']));
   document.getElementById('failsafe-partners-tbody').innerHTML=staleP.map(p=>'<tr><td><strong>'+p.Organisation+'</strong></td><td>'+p['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+p['Follow-Up Date']+'</td><td>'+statusBadge(p['Current Status'])+'</td></tr>').join('')||noDataRow(4,'No stale partners');
   const total=missingEOD.length+blocked.length+overDead.length+staleP.length;
@@ -2529,6 +2576,19 @@ async function refreshChatBadge() {
     if (total > 0) { badge.textContent = total > 99 ? '99+' : total; badge.style.display = 'flex'; }
     else { badge.style.display = 'none'; }
     window._chatTaskUnread = r.tasks || {};
+    // Per-tab dots — so you can see which of General / My Task Chats / All
+    // Task Chats actually has something new without opening all three.
+    // Reuses this same summary call, no extra requests/quota spent.
+    const me = (getIdentity() || '').trim().toLowerCase();
+    const myUnread = Object.entries(window._chatTaskUnread).reduce((sum, [taskId, count]) => {
+      const t = (appData.tasks || []).find(x => x.ID === taskId);
+      const owners = String(t && t['Assigned To'] || '').split(/[,\/&+]+/).map(n => n.trim().toLowerCase());
+      return owners.includes(me) ? sum + count : sum;
+    }, 0);
+    const setDot = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? 'inline-block' : 'none'; };
+    setDot('chat-tab-dot-team', (r.team || 0) > 0 && chatActiveTab !== 'team');
+    setDot('chat-tab-dot-mine', myUnread > 0 && chatActiveTab !== 'mine');
+    setDot('chat-tab-dot-all',  (r.totalTasks || 0) > 0 && chatActiveTab !== 'all');
   } catch (e) { /* silent */ }
 }
 async function markChatReadRemote(channel) {
@@ -2539,6 +2599,21 @@ async function markChatReadRemote(channel) {
     if (handleChatAuthError(r)) return;
     refreshChatBadge();
   } catch (e) { /* silent */ }
+}
+// Clear-all: marks General read, then every one of my task threads read,
+// in one click instead of opening each thread individually.
+async function clearAllChatNotifications() {
+  if (!getIdentity()) return;
+  await markChatReadRemote('team');
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getChatThreads&token=' + encodeURIComponent(getIdentityToken() || '') + '&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' });
+    const r = await res.json();
+    const mine = (r.threads || []).filter(t => t.isMine && t.unread);
+    for (const t of mine) { await markChatReadRemote(t.taskId); }
+    showToast('Chat notifications cleared', 'success');
+  } catch (e) { /* silent */ }
+  refreshChatBadge();
+  if (chatActiveTab !== 'team') loadChatThreadsList(chatActiveTab === 'mine');
 }
 
 // ── Per-task discussion thread (injected into the task drawer) ──
@@ -2680,7 +2755,7 @@ function renderMyTasks() {
       + '</div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px">'
       +   statusBadge(t.Status)
-      +   (t.Deadline ? '<span style="font-size:10px;font-family:Space Mono,monospace;color:'+(isOverdue?'var(--danger)':'var(--muted)')+'">📅 ' + t.Deadline + (isOverdue?' (OVERDUE)':'') + '</span>' : '')
+      +   (t.Deadline ? '<span style="font-size:10px;font-family:Space Mono,monospace;color:'+(isOverdue?'var(--danger)':'var(--muted)')+'">📅 ' + fmtDeadline(t,true) + (isOverdue?' (OVERDUE)':'') + '</span>' : '')
       +   (stale && stale >= 2 && !['Done','Cancelled'].includes(t.Status) ? '<span style="font-size:10px;font-family:Space Mono,monospace;color:var(--warn)">⚠ '+stale+'d stale</span>' : '')
       + '</div>'
       + '<div style="margin-bottom:10px">'
@@ -3248,6 +3323,15 @@ async function submitForm() {
         const ccEmailEl=body.querySelector('[name="Support_Person_Email"]');  // no :not([disabled])
         const ccEmailVal=(ccEmailEl?ccEmailEl.value.trim():'')||(formData['Support_Person_Email']||'');
         formData['Support_Person_Email'] = ccEmailVal || getTeamEmail(supportPerson);
+
+        // Same "read regardless of disabled state" fix as above — the Deadline
+        // datepicker's hidden input gets `disabled` whenever the field is
+        // leader-locked, which silently dropped a set date from formData
+        // entirely (task saved with an empty Deadline despite one being picked).
+        const deadlineEl=body.querySelector('[name="Deadline"]');
+        if(deadlineEl) formData['Deadline']=deadlineEl.value;
+        const deadlineTimeEl=body.querySelector('[name="Deadline_Time"]');
+        if(deadlineTimeEl) formData['Deadline_Time']=deadlineTimeEl.value;
       }
       const missing=schema.fields.filter(f=>f.required&&!f.leaderOnly&&!formData[f.key]).map(f=>f.label);
       if(missing.length){showToast('Required: '+missing.join(', '),'error');return;}
