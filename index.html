@@ -2143,9 +2143,9 @@ function renderTeam() {
   document.getElementById('team-grid').innerHTML = members.map(({name,email,row},i)=>{
     const info   = TEAM_ROLES[name] || { role:'Team Member', dept:'Operations' };
     const color  = colors[i % colors.length];
-    const permsHtml = row ? '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:2px">' + PERM_TABS.map(p=>{
+    const permsHtml = row ? '<div style="margin-top:4px;padding-top:8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px">' + PERM_TABS.map(p=>{
       const on = String(row[p.col]||'').trim().toUpperCase()==='Y';
-      return '<button type="button" onclick="toggleTeamPermission(\''+escQ(name)+'\',\''+escQ(p.tab)+'\','+(!on)+',this)" title="'+(on?'Tap to revoke':'Tap to grant')+' locked-field access on '+p.label+'" style="font-size:9px;font-family:\'Space Mono\',monospace;padding:3px 8px;border-radius:20px;cursor:pointer;border:1px solid '+(on?'rgba(0,212,160,0.4)':'var(--border)')+';background:'+(on?'rgba(0,212,160,0.15)':'var(--surface2)')+';color:'+(on?'#00d4a0':'var(--muted)')+'">'+p.label+(on?' ✓':'')+'</button>';
+      return '<div class="toggle-wrap"><div style="font-size:10px;font-family:\'Space Mono\',monospace;color:var(--text)">'+p.label+'</div><label class="toggle"><input type="checkbox" '+(on?'checked':'')+' onchange="toggleTeamPermission(\''+escQ(name)+'\',\''+escQ(p.tab)+'\',this.checked,this)"><span class="slider"></span></label></div>';
     }).join('') + '</div>' : '';
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;align-items:center;gap:10px">
@@ -2166,19 +2166,19 @@ function renderTeam() {
 // Grants or revokes `name`'s locked-field bypass for `tabName`. Leader-only
 // server-side (updateTeamPermission checks the token itself); this just
 // wires the Team Directory chip to that call and refreshes the view.
-async function toggleTeamPermission(name, tabName, grant, btn) {
-  if (btn) btn.disabled = true;
+async function toggleTeamPermission(name, tabName, grant, el) {
+  if (el) el.disabled = true;
   try {
     const res = await fetch(SCRIPT_URL, { method:'POST', redirect:'follow', body: JSON.stringify({ action:'updateTeamPermission', name, tabName, grant, token: getIdentityToken()||'' }) });
     const r = await res.json();
-    if (r.error) { showToast(r.error, 'error'); if (btn) btn.disabled = false; return; }
+    if (r.error) { showToast(r.error, 'error'); if (el) { el.checked = !grant; el.disabled = false; } return; }
     const shortTab = tabName.replace(/^\d+\.\s*/,'');
     showToast((grant?'Granted ':'Revoked ') + shortTab + ' access for ' + name, 'success');
     await loadData(); // refresh appData.team with the new flag
     renderTeam();
   } catch (e) {
     showToast('Network error updating permission', 'error');
-    if (btn) btn.disabled = false;
+    if (el) { el.checked = !grant; el.disabled = false; }
   }
 }
 
