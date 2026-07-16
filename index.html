@@ -63,6 +63,11 @@
     #leader-badge .lb-name { font-size: 11px; font-weight: 700; color: var(--accent); }
     #leader-badge .lb-role { font-size: 9px; color: var(--muted); font-family: "Space Mono", monospace; margin-top: 1px; }
     #leader-badge .lb-logout { font-size: 9px; color: var(--danger); cursor: pointer; font-family: "Space Mono", monospace; margin-top: 6px; display: inline-block; }
+    #member-badge { margin: 0 10px 8px; padding: 8px 12px; background: rgba(0,212,160,0.1); border: 1px solid rgba(0,212,160,0.25); border-radius: 8px; display: none; }
+    #member-badge.show { display: block; }
+    #member-badge .lb-name { font-size: 11px; font-weight: 700; color: var(--accent2); }
+    #member-badge .lb-role { font-size: 9px; color: var(--muted); font-family: "Space Mono", monospace; margin-top: 1px; }
+    #member-badge .lb-logout { font-size: 9px; color: var(--danger); cursor: pointer; font-family: "Space Mono", monospace; margin-top: 6px; display: inline-block; }
 
     /* MAIN */
     #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
@@ -826,6 +831,11 @@
       <span class="lb-logout" onclick="openChangePasswordModal()" style="color:var(--accent);margin-right:10px">Change password</span>
       <span class="lb-logout" onclick="logoutLeader()">Sign out x</span>
     </div>
+    <div id="member-badge">
+      <div class="lb-name" id="mb-name-text">Team Member</div>
+      <div class="lb-role">Logged In</div>
+      <span class="lb-logout" onclick="logoutLeader()">Sign out x</span>
+    </div>
     <!-- Mobile-only utility strip in sidebar -->
     <div id="sidebar-utils">
       <div class="su-row">
@@ -848,6 +858,7 @@
       <h2 id="topbar-title">Dashboard</h2>
       <span id="topbar-sub"></span>
       <span id="topbar-leader-pill" style="font-size:10px;font-family:'Space Mono',monospace;padding:3px 8px;border-radius:20px;background:rgba(91,82,240,0.2);color:#8880ff;border:1px solid rgba(91,82,240,0.3);white-space:nowrap;flex-shrink:0;display:none">LEADER</span>
+      <span id="topbar-member-pill" style="font-size:10px;font-family:'Space Mono',monospace;padding:3px 8px;border-radius:20px;background:rgba(0,212,160,0.15);color:var(--accent2);border:1px solid rgba(0,212,160,0.3);white-space:nowrap;flex-shrink:0;display:none">✓ LOGGED IN</span>
       <div class="top-gap"></div>
       <span id="topbar-time">--:--</span>
       <button class="top-btn btn-cal" onclick="loadView('meetings');setTimeout(()=>switchMtgTab('calendar'),80);" title="View task deadlines calendar">⊕ Calendar</button>
@@ -2930,25 +2941,36 @@ async function submitChangePassword() {
 }
 
 function updateLeaderUI() {
-  const show=isLeader();
+  const leaderFlag=isLeader();
   const displayName=getIdentity()||'';
-  document.getElementById('leader-badge').classList.toggle('show',show);
-  document.getElementById('topbar-leader-pill').classList.toggle('show',show);
-  if(show) document.getElementById('lb-name-text').textContent=displayName;
+  const loggedIn=!!displayName; // any valid session — leader OR regular team member
+  document.getElementById('leader-badge').classList.toggle('show',leaderFlag);
+  document.getElementById('topbar-leader-pill').classList.toggle('show',leaderFlag);
+  if(leaderFlag) document.getElementById('lb-name-text').textContent=displayName;
+  // Was: no equivalent signal existed for a logged-in-but-not-leader team
+  // member — the login button just kept saying "Login" even after they'd
+  // successfully signed in, with nothing to confirm the session actually
+  // took (vs. just having tapped a Google button). Mirrors the leader
+  // badge/pill above, in teal instead of purple, so every team member gets
+  // the same "yes, you're really logged in" confirmation leaders already had.
+  const memberOnly = loggedIn && !leaderFlag;
+  document.getElementById('member-badge').classList.toggle('show',memberOnly);
+  document.getElementById('topbar-member-pill').classList.toggle('show',memberOnly);
+  if(memberOnly) document.getElementById('mb-name-text').textContent=displayName;
   const lb=document.getElementById('btn-login');
-  if(lb) { lb.textContent=show?('⚡ '+displayName.split(' ')[0]):'Login'; lb.style.color=show?'var(--accent2)':'#8880ff'; }
+  if(lb) { lb.textContent=loggedIn?('⚡ '+displayName.split(' ')[0]):'Login'; lb.style.color=leaderFlag?'var(--accent2)':(loggedIn?'var(--accent2)':'#8880ff'); }
   const slb=document.getElementById('su-login-btn');
-  if(slb) { slb.textContent=show?('⚡ '+displayName.split(' ')[0]):'Login'; slb.classList.toggle('green',show); }
+  if(slb) { slb.textContent=loggedIn?('⚡ '+displayName.split(' ')[0]):'Login'; slb.classList.toggle('green',loggedIn); }
   const stb=document.getElementById('su-theme-btn');
   if(stb) stb.textContent=(document.documentElement.getAttribute('data-theme')==='light'?'🌙':'☀')+' Theme';
   const teamNav=document.getElementById('nav-team-item');
-  if(teamNav) teamNav.style.display=show?'flex':'none';
+  if(teamNav) teamNav.style.display=leaderFlag?'flex':'none';
   const kpiNav=document.getElementById('nav-kpi-item');
-  if(kpiNav) kpiNav.style.display=show?'flex':'none';
+  if(kpiNav) kpiNav.style.display=leaderFlag?'flex':'none';
   // If a non-leader is sitting on the Activity Log view when their session
   // ends (or never had access), bounce them out rather than leaving a now-
   // hidden nav item as the only way back to a visible view.
-  if(!show && currentView==='kpi') loadView('dashboard');
+  if(!leaderFlag && currentView==='kpi') loadView('dashboard');
 }
 
 // ============================================================
