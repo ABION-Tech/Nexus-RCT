@@ -17,7 +17,7 @@ export const config = {
 };
 
 const GAS_URL =
-  'https://script.google.com/macros/s/AKfycbzHFt2LrI_oZ241X3rNd3hDdnASCL_wXoSrQfH1hquinJTWu1nRPgL2wSTDk-iOQoB-/exec';
+  'https://script.google.com/macros/s/AKfycbwDetPC0xURsayzv6GrP2aHuoiHROoGNXwzYqPUmY9pBdYBPHA72j2peUSJ2DJf3JI_/exec';
 
 function readRawBody(req) {
   return new Promise((resolve, reject) => {

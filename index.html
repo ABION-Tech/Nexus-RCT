@@ -1402,6 +1402,82 @@ function getTeamEmail(name) {
   return (fromRoster && fromRoster['Email']) || '';
 }
 
+// Builds/refreshes the four UI elements that list team-member names: the
+// EOD submitter dropdown, the two task-filter dropdowns, and the meeting
+// scheduler's team-chip picker.
+//
+// Was: only ever populated once, inside the DOMContentLoaded handler,
+// which runs synchronously — before loadData() (async) has had any chance
+// to actually fetch appData.team. Since getTeamNames() now reads only from
+// appData.team with no hardcoded fallback list (the sheet is the sole
+// source of truth by design — see note above getTeamNames()), that meant
+// every one of these stayed permanently empty except a blank placeholder,
+// for the whole session, on every device, every time. This is what showed
+// up as "EOD dropdown not displaying names."
+//
+// Fix: pulled into its own function, called once at boot (for initial
+// structure) and again from loadData() once appData.team is actually
+// populated. Clears and rebuilds each time (rather than appendChild-ing on
+// top of what's there) so repeated syncs don't stack duplicate options,
+// and preserves the current selection/static placeholder option where one
+// exists.
+function populateTeamSelects() {
+  const names = getTeamNames();
+
+  const eodSel = document.getElementById('eod-who-select');
+  if (eodSel) {
+    const savedWho = localStorage.getItem('nexus_eod_who');
+    eodSel.innerHTML = '';
+    const blankOpt = document.createElement('option'); blankOpt.value=''; blankOpt.textContent='-- Select your name --'; eodSel.appendChild(blankOpt);
+    names.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; eodSel.appendChild(o); });
+    if (savedWho) eodSel.value = savedWho;
+  }
+
+  const ownerSel = document.getElementById('task-filter-owner');
+  if (ownerSel) {
+    const prev = ownerSel.value;
+    const placeholder = ownerSel.options.length ? ownerSel.options[0].outerHTML : '';
+    ownerSel.innerHTML = placeholder;
+    names.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; ownerSel.appendChild(o); });
+    if (prev) ownerSel.value = prev;
+  }
+
+  const supportSel = document.getElementById('task-filter-support');
+  if (supportSel) {
+    const prev = supportSel.value;
+    const placeholder = supportSel.options.length ? supportSel.options[0].outerHTML : '';
+    supportSel.innerHTML = placeholder;
+    names.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; supportSel.appendChild(o); });
+    if (prev) supportSel.value = prev;
+  }
+
+  const picker = document.getElementById('sched-team-picker');
+  if (picker) {
+    const selected = Array.from(picker.querySelectorAll('.team-chip.selected')).map(c => c.dataset.member);
+    picker.innerHTML = '';
+    names.forEach(m => {
+      const chip = document.createElement('div');
+      chip.className = 'team-chip' + (selected.indexOf(m) !== -1 ? ' selected' : ''); chip.textContent=m; chip.dataset.member=m;
+      chip.onclick = () => chip.classList.toggle('selected');
+      picker.appendChild(chip);
+    });
+  }
+
+  // My Tasks panel's "who am I" selector — was previously populated
+  // separately inside openMyTasks() with its own options.length<=1 guard,
+  // a second, slightly different implementation of the exact same job.
+  // Folded in here so every team-name dropdown in the app goes through one
+  // single, consistent, safe-to-call-repeatedly path.
+  const myTasksSel = document.getElementById('mytasks-who');
+  if (myTasksSel) {
+    const prev = myTasksSel.value;
+    const placeholder = myTasksSel.options.length ? myTasksSel.options[0].outerHTML : '';
+    myTasksSel.innerHTML = placeholder;
+    names.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; myTasksSel.appendChild(o); });
+    if (prev) myTasksSel.value = prev;
+  }
+}
+
 let currentView = 'dashboard';
 let currentTab  = '1. Master Tasks';
 let editingRowId = null;
@@ -1437,27 +1513,11 @@ document.addEventListener('DOMContentLoaded', () => {
     item.addEventListener('click', e => { e.preventDefault(); loadView(item.dataset.view); });
   });
 
-  // EOD who selector
-  const eodSel = document.getElementById('eod-who-select');
-  const blankOpt = document.createElement('option'); blankOpt.value=''; blankOpt.textContent='-- Select your name --'; eodSel.appendChild(blankOpt);
-  getTeamNames().forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; eodSel.appendChild(o); });
-
-  // Populate task owner filter select
-  const ownerSel = document.getElementById('task-filter-owner');
-  getTeamNames().forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; ownerSel.appendChild(o); });
-  const supportSel = document.getElementById('task-filter-support');
-  if (supportSel) getTeamNames().forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; supportSel.appendChild(o); });
-  const savedWho = localStorage.getItem('nexus_eod_who');
-  if (savedWho) eodSel.value = savedWho;
-
-  // Schedule team picker chips
-  const picker = document.getElementById('sched-team-picker');
-  getTeamNames().forEach(m => {
-    const chip = document.createElement('div');
-    chip.className='team-chip'; chip.textContent=m; chip.dataset.member=m;
-    chip.onclick = () => chip.classList.toggle('selected');
-    picker.appendChild(chip);
-  });
+  // EOD who selector, task-filter dropdowns, and the schedule team-picker
+  // are (re)populated by populateTeamSelects() below — called once here for
+  // initial structure, and again from loadData() once appData.team is
+  // actually populated. See that function for why the second call matters.
+  populateTeamSelects();
 
   // Schedule form defaults
   document.getElementById('sched-date').value = todayISO();
@@ -1583,6 +1643,7 @@ async function loadData() {
     }
     if (appData.error) { showToast('Sheet error: '+appData.error,'error'); return; }
     refreshAddButtonAccess(); // appData.team just arrived — updateLeaderUI() at boot ran before this existed
+    populateTeamSelects(); // same reason — these were empty at boot, appData.team exists now
     renderView(currentView);
     updateNavBadges();
     checkMeetingNotifications();
@@ -2356,11 +2417,10 @@ let myTasksFilter = 'all';
 
 function openMyTasks() {
   const sel = document.getElementById('mytasks-who');
-  if (sel.options.length <= 1) {
-    getTeamNames().forEach(m => {
-      const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o);
-    });
-  }
+  // Defensive fallback only — populateTeamSelects() should already have
+  // filled this in from loadData(), but if this panel somehow opens before
+  // that's run, populate it now rather than showing an empty dropdown.
+  if (sel.options.length <= 1) populateTeamSelects();
   // Restore saved name — verify it actually matched an option
   const saved = localStorage.getItem('nexus_eod_who');
   if (saved) {
