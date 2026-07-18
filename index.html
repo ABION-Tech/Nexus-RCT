@@ -83,8 +83,18 @@
     .top-btn:hover { transform: scale(1.04); }
     .btn-sync { background: rgba(91,82,240,0.1); border-color: rgba(91,82,240,0.25); color: #8880ff; }
     .btn-sync.loading { opacity: 0.6; pointer-events: none; }
-    .btn-cal { background: rgba(0,212,160,0.1); border-color: rgba(0,212,160,0.25); color: var(--accent2); }
     .btn-add { background: var(--accent); border-color: var(--accent); color: white; }
+    /* Role×device header visibility — toggled via body.is-leader / body.is-member */
+    #btn-mytasks-panel, #btn-sync { display: none; }
+    body.is-member #btn-mytasks-panel { display: inline-flex; }
+    body.is-leader #btn-sync { display: inline-flex; }
+    body:not(.is-leader):not(.can-add-new) #add-btn { display: none !important; }
+    /* Pull-to-refresh indicator */
+    #ptr-indicator { position: fixed; top: var(--topbar-h); left: 50%; transform: translateX(-50%) translateY(-110%); background: var(--accent); color: #fff; font-size: 10px; font-family: 'Space Mono', monospace; padding: 5px 16px; border-radius: 0 0 16px 16px; z-index: 200; white-space: nowrap; pointer-events: none; transition: transform 0.2s ease; }
+    #ptr-indicator.visible { transform: translateX(-50%) translateY(0); }
+    @media (min-width: 701px) { #ptr-indicator { display: none; } }
+    /* SVG icon sizing inside action buttons */
+    .top-btn svg { width: 13px; height: 13px; display: inline-block; vertical-align: -2px; margin-right: 3px; }
 
     #content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 20px 80px; position: relative; }
     .view { display: none; animation: fadeIn 0.3s ease; }
@@ -106,7 +116,7 @@
     .stat-card .lbl { font-size: 10px; color: var(--muted); margin-top: 5px; font-weight: 600; }
 
     /* CARDS */
-    .dash-grid { display: grid; grid-template-columns: 1fr 300px; gap: 14px; }
+    .dash-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     .card-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
     .card-head h3 { font-size: 14px; font-weight: 700; }
@@ -223,6 +233,11 @@
     /* FILTER BAR */
     .filter-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
     .filter-bar label { font-size: 9px; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    /* Column-visibility picker */
+    .col-picker { position:fixed; z-index:300; background:var(--surface); border:1px solid var(--border2); border-radius:10px; padding:12px 14px; min-width:170px; box-shadow:0 8px 28px rgba(0,0,0,0.35); }
+    .col-picker-title { font-size:9px; font-family:'Space Mono',monospace; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px; margin-bottom:8px; }
+    .col-picker label { display:flex; align-items:center; gap:8px; font-size:12px; padding:3px 0; cursor:pointer; user-select:none; color:var(--text); }
+    .col-picker label input[type=checkbox] { accent-color:var(--accent); cursor:pointer; width:13px; height:13px; flex-shrink:0; }
     .filter-input { background: var(--bg); border: 1px solid var(--border2); color: var(--text); border-radius: 5px; padding: 5px 9px; font-size: 11px; font-family: 'Space Mono', monospace; outline: none; transition: border-color 0.2s; }
     .filter-input:focus { border-color: var(--accent); }
     select.filter-input { appearance: none; cursor: pointer; padding-right: 22px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%235a5a7a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 7px center; }
@@ -411,6 +426,16 @@
     #login-modal.show { display: flex; }
     #change-password-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
     #change-password-modal.show { display: flex; }
+    #profile-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    #profile-modal.show { display: flex; }
+    #profile-modal .login-box { text-align: center; }
+    .profile-avatar-wrap { display: flex; justify-content: center; margin-bottom: 14px; }
+    .profile-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(108,99,255,0.3); }
+    .profile-avatar-fallback { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(108,99,255,0.15); color: var(--accent); font-size: 24px; font-weight: 800; border: 2px solid rgba(108,99,255,0.3); }
+    #profile-modal h2 { letter-spacing: normal; }
+    #profile-role-pill { display: inline-block; font-size: 9px; font-family: "Space Mono", monospace; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; margin-bottom: 18px; }
+    #profile-email { font-size: 11px; color: var(--muted); font-family: "Space Mono", monospace; margin: -12px 0 20px; word-break: break-all; }
+    .profile-actions { display: flex; flex-direction: column; gap: 8px; }
     #add-member-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 210; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
     #add-member-modal.show { display: flex; }
     #attach-help-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 220; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
@@ -443,7 +468,6 @@
     #toast.error { border-color: rgba(255,107,107,0.4); color: var(--danger); }
 
     /* RESPONSIVE */
-    @media (max-width: 1100px) { .dash-grid { grid-template-columns: 1fr; } }
     @media (max-width: 860px) { .stats-grid { grid-template-columns: repeat(2,1fr); } .followup-grid, .failsafe-grid { grid-template-columns: 1fr; } }
     #sidebar-overlay { display: none; position: fixed; inset: 0; z-index: 49; background: transparent; }
     #sidebar-overlay.open { display: block; }
@@ -463,14 +487,14 @@
       .drawer-body, .drawer-foot { padding-left: 14px; padding-right: 14px; }
       .form-row { grid-template-columns: 1fr; }
       .launch-btns-grid { grid-template-columns: 1fr; }
-      /* topbar stripped to 4 items only */
+      /* topbar stripped on mobile */
       #topbar { padding: 0 8px; gap: 4px; }
       #topbar-time { display: none; }
-      .btn-cal, .btn-sync, #btn-theme, #btn-login { display: none !important; }
+      .btn-sync, #btn-theme, #btn-login { display: none !important; }
       #topbar-title { font-size: 14px; }
       .top-btn { padding: 5px 8px; }
-      /* My Tasks always visible */
-      .btn-mytasks { display: inline-flex !important; }
+      /* Chat always visible; My Tasks panel only for members (global rule already handles this) */
+      #btn-chat { display: inline-flex !important; }
       /* show sidebar utils */
       #sidebar-utils { display: flex; }
     }
@@ -585,6 +609,22 @@
     <div id="cp-error"></div>
     <button class="btn-primary" id="cp-btn" style="width:100%;margin-bottom:10px" onclick="submitChangePassword()">Update Passphrase</button>
     <button class="btn-secondary" style="width:100%;font-size:12px" onclick="closeChangePasswordModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- PROFILE MODAL — opened by clicking your name in the sidebar badge -->
+<div id="profile-modal">
+  <div class="login-box">
+    <div class="profile-avatar-wrap" id="profile-avatar-wrap"></div>
+    <h2 id="profile-name-text">—</h2>
+    <span id="profile-role-pill">Team Member</span>
+    <div id="profile-email"></div>
+    <div class="profile-actions">
+      <button class="btn-sm" id="profile-notify-btn" onclick="toggleChatNotifications('profile-notify-btn')" style="width:100%">🔔 Enable notifications</button>
+      <button class="btn-secondary" id="profile-change-pw-btn" style="width:100%;font-size:12px;display:none" onclick="closeProfileModal();openChangePasswordModal()">Change passphrase</button>
+      <button class="btn-secondary" style="width:100%;font-size:12px;color:var(--danger)" onclick="closeProfileModal();logoutLeader()">Sign out</button>
+      <button class="btn-secondary" style="width:100%;font-size:12px" onclick="closeProfileModal()">Close</button>
+    </div>
   </div>
 </div>
 
@@ -801,8 +841,8 @@
         EOD Report
       </a>
       <a class="nav-item" data-view="meetings">
-        <svg fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>
-        Meetings
+        <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
+        Calendar
         <span class="badge" id="nav-badge-meetings">0</span>
       </a>
       <a class="nav-item" data-view="followup">
@@ -824,15 +864,20 @@
         <svg fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
         Team Directory
       </a>
+      <a class="nav-item" id="nav-review-item" data-view="review" style="display:none">
+        <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" clip-rule="evenodd"/></svg>
+        Review Queue
+        <span class="badge" id="nav-badge-review">0</span>
+      </a>
     </nav>
     <div id="leader-badge">
-      <div class="lb-name" id="lb-name-text">Leader</div>
+      <div class="lb-name" id="lb-name-text" onclick="openProfileModal()" style="cursor:pointer">Leader</div>
       <div class="lb-role">Session Active</div>
       <span class="lb-logout" onclick="openChangePasswordModal()" style="color:var(--accent);margin-right:10px">Change password</span>
       <span class="lb-logout" onclick="logoutLeader()">Sign out x</span>
     </div>
     <div id="member-badge">
-      <div class="lb-name" id="mb-name-text">Team Member</div>
+      <div class="lb-name" id="mb-name-text" onclick="openProfileModal()" style="cursor:pointer">Team Member</div>
       <div class="lb-role">Logged In</div>
       <span class="lb-logout" onclick="logoutLeader()">Sign out x</span>
     </div>
@@ -841,9 +886,6 @@
       <div class="su-row">
         <button class="su-btn accent" onclick="syncData();toggleSidebar()">↻ Sync</button>
         <button class="su-btn" id="su-theme-btn" onclick="toggleTheme()" title="Toggle theme">☀ Theme</button>
-      </div>
-      <div class="su-row">
-        <button class="su-btn" onclick="loadView('meetings');setTimeout(()=>switchMtgTab('calendar'),80);toggleSidebar()">⊕ Calendar</button>
         <button class="su-btn accent" id="su-login-btn" onclick="openLoginModal();toggleSidebar()">Login</button>
       </div>
     </div>
@@ -857,23 +899,26 @@
       </button>
       <h2 id="topbar-title">Dashboard</h2>
       <span id="topbar-sub"></span>
-      <span id="topbar-leader-pill" style="font-size:10px;font-family:'Space Mono',monospace;padding:3px 8px;border-radius:20px;background:rgba(91,82,240,0.2);color:#8880ff;border:1px solid rgba(91,82,240,0.3);white-space:nowrap;flex-shrink:0;display:none">LEADER</span>
-      <span id="topbar-member-pill" style="font-size:10px;font-family:'Space Mono',monospace;padding:3px 8px;border-radius:20px;background:rgba(0,212,160,0.15);color:var(--accent2);border:1px solid rgba(0,212,160,0.3);white-space:nowrap;flex-shrink:0;display:none">✓ LOGGED IN</span>
       <div class="top-gap"></div>
       <span id="topbar-time">--:--</span>
-      <button class="top-btn btn-cal" onclick="loadView('meetings');setTimeout(()=>switchMtgTab('calendar'),80);" title="View task deadlines calendar">⊕ Calendar</button>
-      <button class="top-btn btn-mytasks" style="background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2);position:relative" onclick="openChatPanel()" title="Team chat">
-        💬 Chat
+      <button class="top-btn btn-mytasks" id="btn-chat" style="background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2);position:relative" onclick="openChatPanel()" title="Team chat">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd"/></svg>Chat
         <span id="chat-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-size:9px;font-family:'Space Mono',monospace;min-width:16px;height:16px;border-radius:20px;align-items:center;justify-content:center;padding:0 4px;line-height:1">0</span>
       </button>
-      <button class="top-btn btn-mytasks" style="background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2);position:relative" onclick="openMyTasks()" title="Team member quick-update view">👤 My Tasks<span id="mytasks-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-size:9px;font-family:'Space Mono',monospace;min-width:16px;height:16px;border-radius:20px;align-items:center;justify-content:center;padding:0 4px;line-height:1">0</span></button>
-      <button class="top-btn btn-sync" id="btn-sync" onclick="syncData()">↻ Sync</button>
+      <button class="top-btn btn-mytasks" id="btn-mytasks-panel" style="background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2);position:relative" onclick="openMyTasks()" title="My assigned tasks">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>My Tasks
+        <span id="mytasks-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-size:9px;font-family:'Space Mono',monospace;min-width:16px;height:16px;border-radius:20px;align-items:center;justify-content:center;padding:0 4px;line-height:1">0</span>
+      </button>
+      <button class="top-btn btn-sync" id="btn-sync" onclick="syncData()" title="Sync data">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>Sync
+      </button>
       <button class="top-btn" id="btn-theme" onclick="toggleTheme()" title="Toggle light/dark theme" style="font-size:14px;padding:0 8px">☀</button>
       <button class="top-btn" style="background:rgba(91,82,240,0.1);border-color:rgba(91,82,240,0.25);color:#8880ff" onclick="openLoginModal()" id="btn-login">Login</button>
       <button class="top-btn" id="btn-install-pwa" onclick="triggerPWAInstall()" title="Install NEXUS as app" style="display:none;background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2)">⬇ Install</button>
   <!--  <button class="top-btn" id="btn-download-html" onclick="downloadNexusHTML()" title="Download NEXUS" style="background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2)">⬇ Save</button>-->  
       <button class="top-btn btn-add" id="add-btn" onclick="openDrawer()">+ NEW</button>
     </header>
+    <div id="ptr-indicator">↻ Pull to sync</div>
 
     <div id="content" class="pb-10">
 
@@ -914,10 +959,6 @@
           <div class="card">
             <div class="card-head"><h3>Recent Tasks</h3><span class="sub">Latest 6</span></div>
             <div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Task</th><th>Assigned</th><th>Deadline</th><th>Status</th><th>Progress</th><th>Notes</th></tr></thead><tbody id="dash-tasks-tbody"></tbody></table></div>
-          </div>
-          <div class="card">
-            <div class="card-head"><h3>Automations</h3><span class="sub" id="dash-auto-sub">—</span></div>
-            <div style="padding:14px" id="dash-automations"></div>
           </div>
         </div>
       </div>
@@ -979,32 +1020,33 @@
               <option value="priority">Priority ↑</option>
             </select>
             <button class="btn-sm" onclick="exportCSV('tasks')">Export CSV</button>
+            <button class="btn-sm" onclick="openColPicker('tasks-table',this)">Cols ▾</button>
           </div></div>
-          <div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Task</th><th>Priority</th><th>Assigned To</th><th>Supervisor</th><th>Dept</th><th>Deadline</th><th>Status</th><th>Progress</th><th></th></tr></thead><tbody id="tasks-tbody"></tbody></table></div>
+          <div class="table-wrap"><table id="tasks-table" class="data-table"><thead><tr><th>ID</th><th>Task</th><th>Priority</th><th>Assigned To</th><th>Supervisor</th><th>Dept</th><th>Deadline</th><th>Status</th><th>Progress</th><th></th></tr></thead><tbody id="tasks-tbody"></tbody></table></div>
         </div>
       </div>
 
       <!-- COS -->
       <div id="view-cos" class="view">
         <div class="card">
-          <div class="card-head"><h3>COS Database</h3><button class="btn-sm" onclick="exportCSV('cos')">Export CSV</button></div>
-          <div class="table-wrap"><table class="data-table"><thead><tr><th>State</th><th>Admin</th><th>Phone</th><th>Email</th><th>WhatsApp</th><th>Members</th><th>Status</th><th>Launched</th><th></th></tr></thead><tbody id="cos-tbody"></tbody></table></div>
+          <div class="card-head"><h3>COS Database</h3><div style="display:flex;gap:6px"><button class="btn-sm" onclick="exportCSV('cos')">Export CSV</button><button class="btn-sm" onclick="openColPicker('cos-table',this)">Cols ▾</button></div></div>
+          <div class="table-wrap"><table id="cos-table" class="data-table"><thead><tr><th>State</th><th>Admin</th><th>Phone</th><th>Email</th><th>WhatsApp</th><th>Members</th><th>Status</th><th>Progress</th><th>Launched</th><th></th></tr></thead><tbody id="cos-tbody"></tbody></table></div>
         </div>
       </div>
 
       <!-- PARTNERS -->
       <div id="view-partners" class="view">
         <div class="card">
-          <div class="card-head"><h3>Partnerships</h3><button class="btn-sm" onclick="exportCSV('partners')">Export CSV</button></div>
-          <div class="table-wrap"><table class="data-table"><thead><tr><th>Assigned</th><th>Organisation</th><th>Contact</th><th>Type</th><th>Status</th><th>Follow-Up</th><th>MoU</th><th></th></tr></thead><tbody id="partners-tbody"></tbody></table></div>
+          <div class="card-head"><h3>Partnerships</h3><div style="display:flex;gap:6px"><button class="btn-sm" onclick="exportCSV('partners')">Export CSV</button><button class="btn-sm" onclick="openColPicker('partners-table',this)">Cols ▾</button></div></div>
+          <div class="table-wrap"><table id="partners-table" class="data-table"><thead><tr><th>Assigned</th><th>Organisation</th><th>Contact</th><th>Type</th><th>Status</th><th>Progress</th><th>Follow-Up</th><th>MoU</th><th></th></tr></thead><tbody id="partners-tbody"></tbody></table></div>
         </div>
       </div>
 
       <!-- ORG -->
       <div id="view-org" class="view">
         <div class="card">
-          <div class="card-head"><h3>Org Database</h3><button class="btn-sm" onclick="exportCSV('org')">Export CSV</button></div>
-          <div class="table-wrap"><table class="data-table"><thead><tr><th>Organisation</th><th>Industry</th><th>State</th><th>Contact</th><th>Email</th><th>Phone</th><th>Status</th><th></th></tr></thead><tbody id="org-tbody"></tbody></table></div>
+          <div class="card-head"><h3>Org Database</h3><div style="display:flex;gap:6px"><button class="btn-sm" onclick="exportCSV('org')">Export CSV</button><button class="btn-sm" onclick="openColPicker('org-table',this)">Cols ▾</button></div></div>
+          <div class="table-wrap"><table id="org-table" class="data-table"><thead><tr><th>Organisation</th><th>Industry</th><th>State</th><th>Contact</th><th>Email</th><th>Phone</th><th>Status</th><th></th></tr></thead><tbody id="org-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -1013,8 +1055,8 @@
         <div id="kpi-alerts"></div>
         <div id="kpi-flags"></div>
         <div class="card">
-          <div class="card-head"><h3>Activity Log</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sm" onclick="loadView('eod')">+ Submit EOD</button><button class="btn-sm" onclick="exportCSV('kpi')">Export CSV</button></div></div>
-          <div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Day</th><th>Member</th><th>Role</th><th>Completed</th><th>Achievement</th><th>Blockers</th><th>Filed</th><th></th></tr></thead><tbody id="kpi-tbody"></tbody></table></div>
+          <div class="card-head"><h3>Activity Log</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sm" onclick="loadView('eod')">+ Submit EOD</button><button class="btn-sm" onclick="exportCSV('kpi')">Export CSV</button><button class="btn-sm" onclick="openColPicker('kpi-table',this)">Cols ▾</button></div></div>
+          <div class="table-wrap"><table id="kpi-table" class="data-table"><thead><tr><th>Date</th><th>Day</th><th>Member</th><th>Role</th><th>Completed</th><th>Achievement</th><th>Blockers</th><th>Filed</th><th></th></tr></thead><tbody id="kpi-tbody"></tbody></table></div>
         </div>
         <div class="card" style="margin-top:14px">
           <div class="card-head"><h3>Auto-Tracked Activity <span style="font-weight:400;font-size:11px;color:var(--muted)">— real task edits, not self-reported</span></h3></div>
@@ -1025,8 +1067,8 @@
       <!-- MARKETING -->
       <div id="view-marketing" class="view">
         <div class="card">
-          <div class="card-head"><h3>Marketing</h3><button class="btn-sm" onclick="exportCSV('marketing')">Export CSV</button></div>
-          <div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Type</th><th>Topic</th><th>Platform</th><th>Assigned</th><th>Due</th><th>Status</th><th>Link</th><th></th></tr></thead><tbody id="marketing-tbody"></tbody></table></div>
+          <div class="card-head"><h3>Marketing</h3><div style="display:flex;gap:6px"><button class="btn-sm" onclick="exportCSV('marketing')">Export CSV</button><button class="btn-sm" onclick="openColPicker('marketing-table',this)">Cols ▾</button></div></div>
+          <div class="table-wrap"><table id="marketing-table" class="data-table"><thead><tr><th>ID</th><th>Type</th><th>Topic</th><th>Platform</th><th>Assigned</th><th>Due</th><th>Status</th><th>Link</th><th></th></tr></thead><tbody id="marketing-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -1155,6 +1197,15 @@
         <div id="team-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
       </div>
 
+      <!-- REVIEW QUEUE (Fireflies meeting action items) -->
+      <div id="view-review" class="view">
+        <div class="card-head" style="padding:0 0 16px">
+          <h3>Review Queue</h3>
+          <span class="sub">Action items extracted from meetings — nothing here reaches Master Tasks until you approve it.</span>
+        </div>
+        <div id="review-list" style="display:flex;flex-direction:column;gap:10px"></div>
+      </div>
+
       <!-- FOLLOW-UPS -->
       <div id="view-followup" class="view">
         <div class="followup-grid">
@@ -1224,12 +1275,6 @@ if (SCRIPT_URL.includes('YOUR_SCRIPT_ID_HERE')) {
 // application" type, this page's origin added under Authorized JavaScript origins).
 const GOOGLE_CLIENT_ID = '54897471878-72tukkee6t8p3js811ireepf16p4hmq7.apps.googleusercontent.com';
 
-const ALL_TEAM_MEMBERS = [
-  'Ayo T. Joshua','Shina Samson','Israel Idowu','Darlington','Chizaram',
-  'Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora',
-  'Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex',
-  'Mr Sam','Joshua (Tech)','Daniel Bowman'
-];
 // EOD attendance schedule: 0=Sun,1=Mon,...,5=Fri,6=Sat. Default = Mon-Fri for all others.
 const EOD_SCHEDULE_JS = {
   'Shina Samson'  : [1,2,3,4,5],
@@ -1238,7 +1283,7 @@ const EOD_SCHEDULE_JS = {
 function getExpectedTodayMembers() {
   const d = new Date().getDay();
   if(d===0||d===6) return [];
-  return ALL_TEAM_MEMBERS.filter(m => {
+  return getTeamNames().filter(m => {
     const s = EOD_SCHEDULE_JS[m];
     return s ? s.includes(d) : true;
   });
@@ -1249,9 +1294,6 @@ function getExpectedTodayMembers() {
 // single reusable "pick a person" control. Add a key here and set
 // type:'select' on that field in FORM_SCHEMAS to opt a new field in.
 const TEAM_SELECT_FIELDS = ['Assigned To','Support Person','Team Member','Contact Owner'];
-
-// Leader-only fields on Master Tasks — non-leaders cannot edit these
-const LEADER_ONLY_FIELDS = ['Deadline','Assigned To','Assigned_To_Email','Priority','Support Person','Support_Person_Email','Business / Dept'];
 
 // ============================================================
 //  FORM SCHEMAS
@@ -1270,8 +1312,7 @@ const FORM_SCHEMAS = {
       {key:'Business / Dept',label:'Department',type:'select',options:['','COS','Partnerships','Marketing','Product','Operations','Finance','HR'],leaderOnly:true},
       {section:'Priority & Timing'},
       {key:'Priority',label:'Priority',type:'select',options:['URGENT','HIGH','MEDIUM','LOW'],required:true,leaderOnly:true},
-      {key:'Status',label:'Status',type:'select',options:['Not Started','In Progress','Done','Cancelled','Blocked','In Review'],required:true},
-      {key:'% Progress',label:'% Progress (auto-nudged from status, or set it yourself)',type:'number',placeholder:'0-100',min:'0',max:'100'},
+      {key:'Status',label:'Status',type:'select',options:['Not Started','Acknowledged','In Progress','Revisions Needed','In Review','Done','Cancelled','Blocked'],required:true},
       {key:'Start Date',label:'Start Date',type:'date',immutableOnEdit:true},
       {key:'Deadline',label:'Deadline',type:'date',leaderOnly:true},
       {key:'Deadline_Time',label:'Deadline Time (optional, defaults to 9:00 AM)',type:'time',leaderOnly:true},
@@ -1289,7 +1330,7 @@ const FORM_SCHEMAS = {
     {key:'Admin Name',label:'Admin Name',type:'text',required:true},
     {section:'Contact'},{key:'Admin Phone',label:'Phone',type:'tel'},{key:'Admin Email',label:'Email',type:'email'},
     {section:'Status'},{key:'WhatsApp Group Created',label:'WhatsApp Group Created',type:'select',options:['No','Yes'],leaderOnly:true},
-    {key:'Members Count',label:'Members Count',type:'number',leaderOnly:true},{key:'Status',label:'Status',type:'select',options:['Pending','In Progress','Active'],leaderOnly:true},
+    {key:'Members Count',label:'Members Count',type:'number',leaderOnly:true},{key:'Status',label:'Status',type:'select',options:['Not Started','Acknowledged','In Progress','Follow-Up Needed','Active'],leaderOnly:true},
     {key:'Last Report Date',label:'Last Report Date',type:'date'},{key:'Notes',label:'Notes',type:'textarea'},
   ]},
   '3. Partnerships':{label:'Partnership',idKey:'Organisation',appendAction:'appendPartner',fields:[
@@ -1297,7 +1338,7 @@ const FORM_SCHEMAS = {
     {key:'Assigned To',label:'Assigned To',type:'select',required:true,leaderOnly:true},
     {section:'Contact'},{key:'Contact Name',label:'Contact Name',type:'text'},{key:'Contact Email',label:'Contact Email',type:'email'},
     {section:'Classification'},{key:'Category',label:'Category',type:'select',options:['NGO','Government','Corporate','Individual','Academic','Media']},
-    {key:'Current Status',label:'Status',type:'select',options:['In Discussion','Active','Cold','Declined']},
+    {key:'Current Status',label:'Status',type:'select',options:['Not Started','In Discussion','Negotiating','Cold','Active','Declined']},
     {key:'Document Status',label:'Document Status',type:'select',options:['Not Started','Draft Sent','Under Review','Signed','N/A'],leaderOnly:true},
     {section:'Dates'},{key:'Last Contact Date',label:'Last Contact Date',type:'date'},{key:'Follow-Up Date',label:'Follow-Up Date',type:'date'},
     {key:'Remarks',label:'Remarks',type:'textarea'},
@@ -1344,46 +1385,21 @@ const FORM_SCHEMAS = {
   ]},
 };
 
-// Name → email map — update emails here to match your team
-const TEAM_EMAILS = {
-  'Ayo T. Joshua'           : 'othnielemry@gmail.com',
-  'Shina Samson'            : 'rothimmyshiloh@gmail.com',
-  'Israel Idowu'            : 'abionindustries@gmail.com',
-  'Darlington'              : 'newageskillsphere@gmail.com',
-  'Chizaram'                : 'abionplc@gmail.com',
-  'Adetola'                 : 'othnielemrys@gmail.com',
-  'Titi'                    : 'realhmfs@gmail.com',
-  'Naruka'                  : 'ecovaluesindustriesltd@gmail.com',
-  'Bukayo'                  : 'afromationstudios.abion@gmail.com',
-  'Joshua (Content)'        : 'teaofabion@gmail.com',
-  'Seth'                    : 'parallelinfinitystudio@gmail.com',
-  'Nora'                    : 'abionspace@gmail.com',
-  'Rashidat'                : 'ayomidetjoshua@gmail.com',
-  'Muyi'                    : 'abionsynergia@gmail.com',
-  'Perpetual'               : 'perpetual@rescuetap.org',
-  'Christiana'              : 'christiana@rescuetap.org',
-  'Mark'                    : 'mark@rescuetap.org',
-  'Nehemiah'                : 'nehemiah@rescuetap.org',
-  'Joshua Alex'             : 'joshuaalex@rescuetap.org',
-  'Mr Sam'                  : 'sam@rescuetap.org',
-  'Joshua (Tech)'           : 'joshua.tech@rescuetap.org',
-  'Daniel Bowman'           : 'bowmandanielseth@gmail.com',
-};
 const ADD_MEMBER_OPTION = '+ Add New Member…';
 
-// Names/emails from the roster tab ('9. Team Members', populated via the
-// Add Member UI) are merged on top of the hardcoded TEAM_EMAILS map so newly
-// added people show up in every dropdown without editing this file again.
+// '9. Team Members' (appData.team, loaded via loadData()) is the sole
+// source of truth for names/emails — no hardcoded bootstrap list. Always
+// call these two, never read appData.team directly for name/email lookups,
+// so canonicalizeName matching stays consistent everywhere.
 function getTeamNames() {
-  const names = new Set(Object.keys(TEAM_EMAILS));
-  (appData.team || []).forEach(m => { if (m && m['Name']) names.add(String(m['Name']).trim()); });
-  return Array.from(names).sort((a, b) => a.localeCompare(b));
+  const sheetNames = (appData.team||[]).map(m=>String(m['Name']||'').trim()).filter(Boolean);
+  return sheetNames.sort((a,b)=>a.localeCompare(b));
 }
 function getTeamEmail(name) {
   if (!name) return '';
-  const fromRoster = (appData.team || []).find(m => String(m['Name'] || '').trim() === name);
-  if (fromRoster && fromRoster['Email']) return fromRoster['Email'];
-  return TEAM_EMAILS[name] || '';
+  const canon = canonicalizeName(name).trim().toUpperCase();
+  const fromRoster = (appData.team||[]).find(m=>canonicalizeName(String(m['Name']||'').trim()).toUpperCase()===canon);
+  return (fromRoster && fromRoster['Email']) || '';
 }
 
 let currentView = 'dashboard';
@@ -1424,19 +1440,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // EOD who selector
   const eodSel = document.getElementById('eod-who-select');
   const blankOpt = document.createElement('option'); blankOpt.value=''; blankOpt.textContent='-- Select your name --'; eodSel.appendChild(blankOpt);
-  ALL_TEAM_MEMBERS.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; eodSel.appendChild(o); });
+  getTeamNames().forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; eodSel.appendChild(o); });
 
   // Populate task owner filter select
   const ownerSel = document.getElementById('task-filter-owner');
-  ALL_TEAM_MEMBERS.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; ownerSel.appendChild(o); });
+  getTeamNames().forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; ownerSel.appendChild(o); });
   const supportSel = document.getElementById('task-filter-support');
-  if (supportSel) ALL_TEAM_MEMBERS.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; supportSel.appendChild(o); });
+  if (supportSel) getTeamNames().forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; supportSel.appendChild(o); });
   const savedWho = localStorage.getItem('nexus_eod_who');
   if (savedWho) eodSel.value = savedWho;
 
   // Schedule team picker chips
   const picker = document.getElementById('sched-team-picker');
-  ALL_TEAM_MEMBERS.forEach(m => {
+  getTeamNames().forEach(m => {
     const chip = document.createElement('div');
     chip.className='team-chip'; chip.textContent=m; chip.dataset.member=m;
     chip.onclick = () => chip.classList.toggle('selected');
@@ -1448,6 +1464,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('sched-time').value = '10:00';
   updateScheduleType();
   updateLeaderUI();
+  applyColVisibility();
 
   // Reads now require a verified session — if we already have one
   // (leader token or a prior Google sign-in), go straight to data;
@@ -1497,7 +1514,7 @@ async function handleGoogleCredential(response) {
     const r = await res.json();
     if (r.error === 'no_match') { errEl.textContent = r.message || "That Google account isn't on the team roster yet."; return; }
     if (r.error) { errEl.textContent = r.error; return; }
-    setTeamSession(r.token, r.name, r.isLeader);
+    setTeamSession(r.token, r.name, r.isLeader, r.picture);
     closeLoginModal();
     // Was missing: without this, a Google-signed-in leader stayed logged
     // out visually — the topbar/sidebar "Login" button never flipped to
@@ -1522,7 +1539,7 @@ function loadView(name) {
   currentView = name;
   document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.view===name));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id===('view-'+name)));
-  const titles = {dashboard:'KPI Dashboard',tasks:'Master Tasks',cos:'COS',partners:'Partnerships',org:'Org Database',kpi:'Activity Log',marketing:'Marketing',eod:'EOD Report',meetings:'Meetings',followup:'Follow-Up Tracker',failsafe:'Failsafe Alerts',automation:'Automation',team:'Team Directory'};
+  const titles = {dashboard:'KPI Dashboard',tasks:'Master Tasks',cos:'COS',partners:'Partnerships',org:'Org Database',kpi:'Activity Log',marketing:'Marketing',eod:'EOD Report',meetings:'Calendar',followup:'Follow-Up Tracker',failsafe:'Failsafe Alerts',automation:'Automation',team:'Team Directory',review:'Review Queue'};
   document.getElementById('topbar-title').textContent = titles[name]||name;
   const lbl = ADD_BTN_LABELS[name];
   const addBtn = document.getElementById('add-btn');
@@ -1565,6 +1582,7 @@ async function loadData() {
       return;
     }
     if (appData.error) { showToast('Sheet error: '+appData.error,'error'); return; }
+    refreshAddButtonAccess(); // appData.team just arrived — updateLeaderUI() at boot ran before this existed
     renderView(currentView);
     updateNavBadges();
     checkMeetingNotifications();
@@ -1672,6 +1690,7 @@ function renderView(name) {
     case 'failsafe':   renderFailsafe(); break;
     case 'automation': renderAutomation(); break;
     case 'team':       renderTeam(); break;
+    case 'review':     loadReviewQueue(); break;
   }
 }
 
@@ -1687,7 +1706,7 @@ function todayISO() {
 }
 function daysSince(ds) { if(!ds) return null; const d=new Date(ds); return isNaN(d)?null:Math.floor((Date.now()-d.getTime())/86400000); }
 function taskStaleDays(t) { const ref=t['Last_Updated']||t['Start Date']; const d=daysSince(ref); return d===null?999:d; }
-function statusBadge(s) { const m={'Not Started':'badge-gray','In Progress':'badge-blue','Done':'badge-green','Cancelled':'badge-gray','Blocked':'badge-red','Active':'badge-green','Pending':'badge-yellow','MoU Pending':'badge-yellow','In Discussion':'badge-blue','Cold':'badge-gray','Draft Sent':'badge-orange','Signed':'badge-green','Declined':'badge-red','In Review':'badge-yellow','Scheduled':'badge-teal','Y':'badge-green','N':'badge-red'}; return '<span class="badge-pill '+(m[s]||'badge-gray')+'">'+( s||'--')+'</span>'; }
+function statusBadge(s) { const m={'Not Started':'badge-gray','Acknowledged':'badge-yellow','In Progress':'badge-blue','Revisions Needed':'badge-orange','Done':'badge-green','Cancelled':'badge-gray','Blocked':'badge-red','Active':'badge-green','Pending':'badge-yellow','MoU Pending':'badge-yellow','In Discussion':'badge-blue','Negotiating':'badge-yellow','Cold':'badge-gray','Follow-Up Needed':'badge-orange','Draft Sent':'badge-orange','Signed':'badge-green','Declined':'badge-red','In Review':'badge-yellow','Scheduled':'badge-teal','Y':'badge-green','N':'badge-red'}; return '<span class="badge-pill '+(m[s]||'badge-gray')+'">'+( s||'--')+'</span>'; }
 function priorityBadge(p) { const m={'URGENT':'badge-red','HIGH':'badge-red','MEDIUM':'badge-yellow','LOW':'badge-green'}; return '<span class="badge-pill '+(m[p]||'badge-gray')+'">'+(p||'--')+'</span>'; }
 // Shared deadline display for in-app task views — same intent as the email's
 // formatDeadline() in CODE.GS: a bare date is ambiguous (does it mean 9am?
@@ -1718,6 +1737,27 @@ function depChipsHtml(t) {
     const label = !dep ? id+' ?' : id+(dep.Status==='Done'?' ✓':' …');
     return '<span class="dep-chip '+cls+'" title="Depends on '+id+(dep?' — '+dep.Status:' — task not found')+'">⛓ '+label+'</span>';
   }).join('') + '</div>';
+}
+// Reverse of depChipsHtml — a pill for tasks that depend ON this one (i.e.
+// this task is blocking them). Backend already tracks "Depends On" per
+// task; this just walks appData.tasks client-side, no new endpoint needed.
+function blockedByMeChipsHtml(t) {
+  const all = appData.tasks||[];
+  const blocking = all.filter(x=>{
+    const ids = String(x['Depends On']||'').split(',').map(s=>s.trim());
+    return ids.includes(String(t.ID).trim()) && !['Done','Cancelled'].includes(x.Status);
+  });
+  if (!blocking.length) return '';
+  const title = blocking.map(x=>x.ID+' — '+String(x['Task Description']||'').substring(0,40)).join('\n').replace(/"/g,'&quot;');
+  return ' <span class="dep-chip pending" title="Blocking:\n'+title+'">🚧 blocking '+blocking.length+'</span>';
+}
+// Small "3/5" chip using the checklist data already in the main payload —
+// no extra round-trip needed just to show a count in the table.
+function checklistChipHtml(t) {
+  const items = (appData.checklists||[]).filter(c => String(c['Task ID'])===String(t.ID));
+  if (!items.length) return '';
+  const done = items.filter(c=>String(c.Done).trim().toUpperCase()==='Y').length;
+  return ' <span class="dep-chip '+(done===items.length?'done':'unknown')+'" title="Checklist progress">✅ '+done+'/'+items.length+'</span>';
 }
 function progressBar(pct) { const n=parseInt(pct)||0; return n+'%<span class="progress-track"><span class="progress-fill'+(n>=100?' complete':'')+'" style="width:'+Math.min(n,100)+'%"></span></span>'; }
 function isLeader() {
@@ -1765,7 +1805,6 @@ function renderDashboard() {
   document.getElementById('dashboard-alerts').innerHTML = alerts.join('');
   const recentTasks = [...tasks].sort((a,b)=>(b.Last_Updated||b.ID||'').localeCompare(a.Last_Updated||a.ID||''));
   document.getElementById('dash-tasks-tbody').innerHTML = recentTasks.slice(0,6).map(t=>'<tr onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" style="cursor:pointer"><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+'</td><td>'+t['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+fmtDeadline(t,true)+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td>'+(t.Notes||'--')+'</td></tr>').join('')||noDataRow(7,'No tasks. Sync or add one.');
-  document.getElementById('dash-automations').innerHTML = autos.slice(0,4).map(a=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;font-weight:600">'+a.Label+'</span><span class="badge-pill '+(a.Enabled?'badge-green':'badge-gray')+'">'+(a.Enabled?'ON':'OFF')+'</span></div>').join('')||'<p style="color:var(--muted);font-size:12px">No automation data</p>';
 }
 
 // ============================================================
@@ -1806,7 +1845,7 @@ function renderTasks() {
     tasks=tasks.filter(t=>[t.ID,t['Task Description'],t['Assigned To'],t['Support Person'],t['Business / Dept'],t.Notes].some(v=>String(v??'').toLowerCase().includes(q)));
   }
   if(fStatus)   tasks=tasks.filter(t=>t.Status===fStatus);
-  if(fOwner)    tasks=tasks.filter(t=>String(t['Assigned To']??'').split(/[,\/&+]+/).map(n=>n.trim().toLowerCase()).includes(fOwner.trim().toLowerCase())); // split multi-assignee field and check if selected name is one of them
+  if(fOwner)    tasks=tasks.filter(t=>String(t['Assigned To']??'').split(/[,\/&+]+/).map(n=>canonicalizeName(n.trim()).toUpperCase()).includes(canonicalizeName(fOwner.trim()).toUpperCase())); // exact canonicalized match against each assignee token
   if(fPriority) tasks=tasks.filter(t=>t.Priority===fPriority);
   if(fDept)     tasks=tasks.filter(t=>t['Business / Dept']===fDept);
   if(fSupport)  tasks=tasks.filter(t=>String(t['Support Person']??'').split(/[,\/&+]+/).map(n=>n.trim().toLowerCase()).includes(fSupport.trim().toLowerCase()));
@@ -1826,18 +1865,18 @@ function renderTasks() {
     const isOver=t.Deadline&&!['Done','Cancelled'].includes(t.Status)&&new Date(t.Deadline)<new Date(new Date().toDateString());
     const dlStyle = isOver ? 'color:var(--danger);font-weight:700;cursor:pointer;text-decoration:underline dotted' : 'cursor:pointer;text-decoration:underline dotted;color:var(--muted)';
     const dlTitle = t.Deadline ? (isOver ? 'OVERDUE — click to edit' : 'Click to edit deadline') : '';
-    return '<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+sw+depChipsHtml(t)+'</td><td>'+priorityBadge(t.Priority)+'</td><td>'+t['Assigned To']+'</td><td>'+(t['Support Person']||'--')+'</td><td>'+(t['Business / Dept']||'--')+'</td><td style="font-family:Space Mono,monospace;font-size:11px;'+dlStyle+'" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" title="'+dlTitle+'">'+fmtDeadline(t,true)+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Edit</button></td></tr>';
+    return '<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+sw+depChipsHtml(t)+blockedByMeChipsHtml(t)+checklistChipHtml(t)+'</td><td>'+priorityBadge(t.Priority)+'</td><td>'+t['Assigned To']+'</td><td>'+(t['Support Person']||'--')+'</td><td>'+(t['Business / Dept']||'--')+'</td><td style="font-family:Space Mono,monospace;font-size:11px;'+dlStyle+'" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" title="'+dlTitle+'">'+fmtDeadline(t,true)+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Edit</button></td></tr>';
   }).join('')||noDataRow(10,'No tasks');
 }
 
 function renderCOS() {
   const cos=appData.cos||[];
-  document.getElementById('cos-tbody').innerHTML = cos.map(c=>'<tr><td>'+c.State+'</td><td>'+c['Admin Name']+'</td><td>'+(c['Admin Phone']||'--')+'</td><td>'+(c['Admin Email']||'--')+'</td><td>'+statusBadge(c['WhatsApp Group Created']==='Yes'?'Active':'Pending')+'</td><td>'+(c['Members Count']||0)+'</td><td>'+statusBadge(c.Status)+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(c['Last Report Date']||'--')+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(c.State)+'\',\'2. COS\')">Edit</button></td></tr>').join('')||noDataRow(9,'No COS data');
+  document.getElementById('cos-tbody').innerHTML = cos.map(c=>'<tr><td>'+c.State+'</td><td>'+c['Admin Name']+'</td><td>'+(c['Admin Phone']||'--')+'</td><td>'+(c['Admin Email']||'--')+'</td><td>'+statusBadge(c['WhatsApp Group Created']==='Yes'?'Active':'Pending')+'</td><td>'+(c['Members Count']||0)+'</td><td>'+statusBadge(c.Status)+'</td><td>'+progressBar(c['% Progress'])+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(c['Last Report Date']||'--')+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(c.State)+'\',\'2. COS\')">Edit</button></td></tr>').join('')||noDataRow(10,'No COS data');
 }
 
 function renderPartners() {
   const p=appData.partners||[];
-  document.getElementById('partners-tbody').innerHTML = p.map(r=>'<tr><td>'+r['Assigned To']+'</td><td><strong>'+r.Organisation+'</strong></td><td>'+(r['Contact Name']||'--')+'</td><td><span class="badge-pill badge-gray">'+(r.Category||'--')+'</span></td><td>'+statusBadge(r['Current Status'])+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(r['Follow-Up Date']||'--')+'</td><td>'+statusBadge(r['Document Status'])+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(r.Organisation)+'\',\'3. Partnerships\')">Edit</button></td></tr>').join('')||noDataRow(8,'No partnerships');
+  document.getElementById('partners-tbody').innerHTML = p.map(r=>'<tr><td>'+r['Assigned To']+'</td><td><strong>'+r.Organisation+'</strong></td><td>'+(r['Contact Name']||'--')+'</td><td><span class="badge-pill badge-gray">'+(r.Category||'--')+'</span></td><td>'+statusBadge(r['Current Status'])+'</td><td>'+progressBar(r['% Progress'])+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(r['Follow-Up Date']||'--')+'</td><td>'+statusBadge(r['Document Status'])+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(r.Organisation)+'\',\'3. Partnerships\')">Edit</button></td></tr>').join('')||noDataRow(9,'No partnerships');
 }
 
 function renderOrg() {
@@ -2110,37 +2149,98 @@ async function toggleAutomation(key,enabled) {
 // ============================================================
 //  TEAM DIRECTORY
 // ============================================================
-const TEAM_ROLES = {
-  'Ayo T. Joshua'  : { role:'Deputy Operations', dept:'Leadership', leader:true },
-  'Shina Samson'   : { role:'Acting COO',         dept:'Leadership', leader:true },
-  'Israel Idowu'   : { role:'Tech',               dept:'Technology' },
-  'Darlington'     : { role:'Tech',               dept:'Technology' },
-  'Chizaram'       : { role:'Grants',             dept:'Grants & Funding' },
-  'Adetola'        : { role:'Partnerships',       dept:'Partnerships' },
-  'Titi'           : { role:'Content',            dept:'Content & Media' },
-  'Naruka'         : { role:'Data & Research',    dept:'Data' },
-  'Bukayo'         : { role:'Outreach',           dept:'Outreach' },
-  'Joshua (Content)': { role:'Content',           dept:'Content & Media' },
-  'Seth'           : { role:'Partnerships',       dept:'Partnerships' },
-  'Nora'           : { role:'Content',            dept:'Content & Media' },
-  'Rashidat'       : { role:'Grants',             dept:'Grants & Funding' },
-  'Muyi'           : { role:'Outreach',           dept:'Outreach' },
-  'Perpetual'      : { role:'Admin',              dept:'Operations' },
-  'Christiana'     : { role:'Admin',              dept:'Operations' },
-  'Mark'           : { role:'Tech',               dept:'Technology' },
-  'Nehemiah'       : { role:'Outreach',           dept:'Outreach' },
-  'Joshua Alex'    : { role:'Partnerships',       dept:'Partnerships' },
-  'Mr Sam'         : { role:'Data & Research',    dept:'Data' },
-  'Joshua (Tech)'  : { role:'Tech',               dept:'Technology' },
-  'Daniel Bowman'  : { role:'Leadership',         dept:'Leadership', leader:true },
-};
+// ═════════════════════════════════════
+//  REVIEW QUEUE — Fireflies meeting action items (leader-only)
+// ═════════════════════════════════════
+// Nothing from the Fireflies -> n8n -> ingestMeetingSummary pipeline ever
+// reaches Master Tasks directly — every item lands here first and needs an
+// explicit Approve (or Reject) from a leader. See ingestMeetingSummary in
+// code.gs for the ingest side.
+async function loadReviewQueue() {
+  if (!isLeader()) { showToast('Leader login required','error'); loadView('dashboard'); return; }
+  const listEl = document.getElementById('review-list');
+  listEl.innerHTML = '<div class="sub">Loading…</div>';
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getPendingAITasks&token=' + encodeURIComponent(getIdentityToken()||'') + '&_=' + Date.now(), { redirect:'follow', cache:'no-store' });
+    const r = await res.json();
+    if (r.error) { listEl.innerHTML = '<div class="sub">'+r.error+'</div>'; return; }
+    renderReviewQueue(r.items || []);
+  } catch(e) {
+    listEl.innerHTML = '<div class="sub">Failed to load — '+e.message+'</div>';
+  }
+}
+function renderReviewQueue(items) {
+  const listEl = document.getElementById('review-list');
+  const badge = document.getElementById('nav-badge-review');
+  if (badge) { badge.textContent = items.length; badge.style.display = items.length ? 'inline-block' : 'none'; }
+  if (!items.length) { listEl.innerHTML = '<div class="sub">Nothing pending — the queue is empty.</div>'; return; }
+
+  const names = getTeamNames();
+  listEl.innerHTML = items.map(it => {
+    const id = it.ID;
+    const matched = it['Matched Assignee'] || '';
+    const assigneeOptions = ['<option value="">— choose assignee —</option>']
+      .concat(names.map(n => '<option value="'+escQ(n)+'"'+(n===matched?' selected':'')+'>'+n+'</option>'))
+      .join('');
+    const warn = matched ? '' : '<div style="font-size:11px;color:var(--danger);margin-top:4px">⚠ Could not match "'+(it['Suggested Assignee']||'unknown')+'" to a roster name — pick one before approving.</div>';
+    return '<div class="card" style="padding:14px" id="rv-card-'+id+'">'
+      + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'
+      +   'From meeting '+(it['Meeting_ID']||'—')+' · Fireflies suggested: '+(it['Suggested Assignee']||'—')+' · '+(it['Created_At']?new Date(it['Created_At']).toLocaleDateString():'')
+      + '</div>'
+      + '<textarea class="form-input" id="rv-desc-'+id+'" rows="2" style="width:100%;margin-bottom:8px">'+(it['Task Description']||'')+'</textarea>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
+      +   '<select class="form-input" id="rv-assignee-'+id+'" style="flex:1;min-width:160px">'+assigneeOptions+'</select>'
+      +   '<input type="date" class="form-input" id="rv-deadline-'+id+'" value="'+(it['Suggested Deadline']||'')+'" style="flex:1;min-width:140px">'
+      +   '<select class="form-input" id="rv-priority-'+id+'" style="width:120px">'
+      +     ['URGENT','HIGH','MEDIUM','LOW'].map(p=>'<option'+(p===(it['Priority']||'MEDIUM')?' selected':'')+'>'+p+'</option>').join('')
+      +   '</select>'
+      + '</div>'
+      + warn
+      + '<div style="display:flex;gap:8px;margin-top:10px">'
+      +   '<button class="btn-primary" style="flex:1" onclick="approveReviewItem(\''+escQ(id)+'\')">✓ Approve → Master Tasks</button>'
+      +   '<button class="btn-secondary" style="color:var(--danger)" onclick="rejectReviewItem(\''+escQ(id)+'\')">Reject</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+async function approveReviewItem(id) {
+  const desc      = document.getElementById('rv-desc-'+id).value.trim();
+  const assignee  = document.getElementById('rv-assignee-'+id).value;
+  const deadline  = document.getElementById('rv-deadline-'+id).value;
+  const priority  = document.getElementById('rv-priority-'+id).value;
+  if (!desc || !assignee) { showToast('Description and assignee are required', 'error'); return; }
+  try {
+    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({
+      action:'approvePendingAITask', id, token:getIdentityToken(),
+      data:{ taskDescription:desc, assignedTo:assignee, deadline, priority }
+    })});
+    const r = await res.json();
+    if (r.error) { showToast(r.error, 'error'); return; }
+    showToast('Approved → Master Tasks', 'success');
+    loadReviewQueue(); loadData();
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+async function rejectReviewItem(id) {
+  try {
+    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({action:'rejectPendingAITask', id, token:getIdentityToken()})});
+    const r = await res.json();
+    if (r.error) { showToast(r.error, 'error'); return; }
+    showToast('Rejected', 'success');
+    loadReviewQueue();
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
 function renderTeam() {
   if(!isLeader()){showToast('Leader login required','error');loadView('dashboard');return;}
-  // Prefer sheet data if populated, else fall back to hardcoded TEAM_EMAILS
+  // '9. Team Members' (appData.team) is the sole source of truth — no
+  // hardcoded fallback list. If the sheet's empty, say so instead of
+  // silently showing stale hardcoded names.
   const sheetRows = (appData.team||[]).filter(r=>r['Name']);
-  const members = sheetRows.length
-    ? sheetRows.map(r=>({name:r['Name'], email:r['Email']||'', row:r}))
-    : Object.entries(TEAM_EMAILS).map(([name,email])=>({name,email,row:null}));
+  if (!sheetRows.length) {
+    document.getElementById('team-grid').innerHTML = '<div class="sub" style="padding:20px 0">No team members on the roster yet. Use "Add Member" to add one.</div>';
+    return;
+  }
+  const members = sheetRows.map(r=>({name:r['Name'], email:r['Email']||'', row:r}));
   const initials= n => n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
   const colors  = ['#5b52f0','#00d4a0','#f0a030','#f05060','#4090f0','#a060f0','#20c0a0'];
   // Per-tab locked-field access — mirrors TAB_TRUST_COLUMN in code.gs. A
@@ -2150,9 +2250,12 @@ function renderTeam() {
     {tab:'1. Master Tasks', col:'Trusted_MasterTasks', label:'Tasks'},
     {tab:'2. COS',          col:'Trusted_COS',          label:'COS'},
     {tab:'3. Partnerships', col:'Trusted_Partnerships', label:'Partners'},
+    // Not a real sheet tab — gates whether this non-leader sees/uses the
+    // global "+ NEW" button at all (see can-add-new class / refreshAddButtonAccess()).
+    {tab:'NewButton',       col:'Trusted_NewButton',    label:'+New'},
   ];
   document.getElementById('team-grid').innerHTML = members.map(({name,email,row},i)=>{
-    const info   = TEAM_ROLES[name] || { role:'Team Member', dept:'Operations' };
+    const info   = { role: (row&&row['Role']) || 'Team Member', dept: (row&&row['Department']) || 'Operations', leader: !!(row&&row['IsLeader']) };
     const color  = colors[i % colors.length];
     const permsHtml = row ? '<div style="margin-top:4px;padding-top:8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px">' + PERM_TABS.map(p=>{
       const on = String(row[p.col]||'').trim().toUpperCase()==='Y';
@@ -2183,10 +2286,11 @@ async function toggleTeamPermission(name, tabName, grant, el) {
     const res = await fetch(SCRIPT_URL, { method:'POST', redirect:'follow', body: JSON.stringify({ action:'updateTeamPermission', name, tabName, grant, token: getIdentityToken()||'' }) });
     const r = await res.json();
     if (r.error) { showToast(r.error, 'error'); if (el) { el.checked = !grant; el.disabled = false; } return; }
-    const shortTab = tabName.replace(/^\d+\.\s*/,'');
+    const shortTab = tabName === 'NewButton' ? '+New button' : tabName.replace(/^\d+\.\s*/,'');
     showToast((grant?'Granted ':'Revoked ') + shortTab + ' access for ' + name, 'success');
     await loadData(); // refresh appData.team with the new flag
     renderTeam();
+    refreshAddButtonAccess(); // in case a leader just changed their own or the current session's grant
   } catch (e) {
     showToast('Network error updating permission', 'error');
     if (el) { el.checked = !grant; el.disabled = false; }
@@ -2222,8 +2326,9 @@ function refreshMyTasksBadge() {
   if (!badge) return;
   const me = getIdentity();
   if (!me) { badge.style.display = 'none'; return; }
+  const meCanon = canonicalizeName(me.trim()).toUpperCase();
   const mine = (appData.tasks||[]).filter(t =>
-    String(t['Assigned To']??'').split(/[,\/&+]+/).map(n=>n.trim().toLowerCase()).includes(me.trim().toLowerCase())
+    String(t['Assigned To']??'').split(/[,\/&+]+/).map(n=>canonicalizeName(n.trim()).toUpperCase()).includes(meCanon)
     && t.Status !== 'Done'
   );
   let seen = [];
@@ -2236,8 +2341,9 @@ function refreshMyTasksBadge() {
 function markMyTasksSeen() {
   const me = getIdentity();
   if (!me) return;
+  const meCanon = canonicalizeName(me.trim()).toUpperCase();
   const mine = (appData.tasks||[]).filter(t =>
-    String(t['Assigned To']??'').split(/[,\/&+]+/).map(n=>n.trim().toLowerCase()).includes(me.trim().toLowerCase())
+    String(t['Assigned To']??'').split(/[,\/&+]+/).map(n=>canonicalizeName(n.trim()).toUpperCase()).includes(meCanon)
   );
   try { localStorage.setItem('nexus_mytasks_seen_'+me, JSON.stringify(mine.map(t=>t.ID))); } catch(e) {}
   refreshMyTasksBadge();
@@ -2251,7 +2357,7 @@ let myTasksFilter = 'all';
 function openMyTasks() {
   const sel = document.getElementById('mytasks-who');
   if (sel.options.length <= 1) {
-    ALL_TEAM_MEMBERS.forEach(m => {
+    getTeamNames().forEach(m => {
       const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o);
     });
   }
@@ -2261,7 +2367,7 @@ function openMyTasks() {
     sel.value = saved;
     // If no exact match, try case-insensitive
     if (!sel.value) {
-      const match = ALL_TEAM_MEMBERS.find(m => m.toLowerCase() === saved.toLowerCase());
+      const match = getTeamNames().find(m => m.toLowerCase() === saved.toLowerCase());
       if (match) sel.value = match;
     }
   }
@@ -2296,8 +2402,9 @@ let chatPanelOpen = false;
 // whichever comes first.
 function getTeamToken()  { return localStorage.getItem('nexus_team_token'); }
 function getTeamName()   { return localStorage.getItem('nexus_team_name'); }
-function setTeamSession(token, name, isLeaderFlag) { localStorage.setItem('nexus_team_token', token); localStorage.setItem('nexus_team_name', name); localStorage.setItem('nexus_team_isleader', isLeaderFlag ? '1' : ''); }
-function clearTeamSession() { localStorage.removeItem('nexus_team_token'); localStorage.removeItem('nexus_team_name'); localStorage.removeItem('nexus_team_isleader'); }
+function setTeamSession(token, name, isLeaderFlag, picture) { localStorage.setItem('nexus_team_token', token); localStorage.setItem('nexus_team_name', name); localStorage.setItem('nexus_team_isleader', isLeaderFlag ? '1' : ''); if (picture) localStorage.setItem('nexus_team_picture', picture); else localStorage.removeItem('nexus_team_picture'); }
+function clearTeamSession() { localStorage.removeItem('nexus_team_token'); localStorage.removeItem('nexus_team_name'); localStorage.removeItem('nexus_team_isleader'); localStorage.removeItem('nexus_team_picture'); }
+function getTeamPicture() { return localStorage.getItem('nexus_team_picture') || ''; }
 
 // ── Idle auto-logout ────────────────────────────────────────────
 // Sessions used to just sit there for up to 30 days with no activity
@@ -2513,14 +2620,15 @@ function backToThreadsList() {
   loadChatThreadsList(chatActiveTab === 'mine');
 }
 
-async function loadActiveTaskThread(scrollToBottom) {
+async function loadActiveTaskThread(scrollToBottom, showSpinner = scrollToBottom) {
   if (!chatActiveTaskId) return;
   const wrap = document.getElementById('chat-messages');
-  if (scrollToBottom && wrap) wrap.innerHTML = CHAT_SPINNER_HTML;
+  if (showSpinner && wrap) wrap.innerHTML = CHAT_SPINNER_HTML;
   try {
     const res = await fetch(SCRIPT_URL + '?action=getChatMessages&channel=task&taskId=' + encodeURIComponent(chatActiveTaskId) + '&token=' + encodeURIComponent(getIdentityToken() || '') + '&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' });
     const r = await res.json();
     if (handleChatAuthError(r)) return;
+    if (r.error === 'Access denied.') { wrap.innerHTML = '<div class="chat-empty">You don\'t have access to this task\'s discussion.</div>'; return; }
     renderChatMessages(document.getElementById('chat-messages'), r.messages || []);
     if (scrollToBottom) scrollChatToBottom('chat-messages');
   } catch (e) { /* silent — polling will retry */ }
@@ -2540,17 +2648,19 @@ async function sendChatPanelMessage() {
     const r = await res.json();
     if (handleChatAuthError(r)) return;
     if (r.error) { showToast(r.error, 'error'); return; }
-    if (chatActiveTaskId) loadActiveTaskThread(true); else loadTeamChat(true);
+    if (chatActiveTaskId) loadActiveTaskThread(true, false); else loadTeamChat(true, false);
   } catch (e) { showToast('Failed to send message', 'error'); }
 }
 
 const CHAT_SPINNER_HTML = '<div class="chat-empty" style="display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,0.15);border-top-color:var(--accent);border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>Loading…</div>';
-async function loadTeamChat(scrollToBottom) {
+async function loadTeamChat(scrollToBottom, showSpinner = scrollToBottom) {
   const wrap = document.getElementById('chat-messages');
-  // Only show the spinner on an actual open (scrollToBottom=true) — not on
-  // the silent 12s background poll, which would otherwise flash/reset the
-  // view every cycle.
-  if (scrollToBottom && wrap) wrap.innerHTML = CHAT_SPINNER_HTML;
+  // Was: always keyed off scrollToBottom, which also fired on every send —
+  // flashing the whole panel to a spinner even though it's already open and
+  // you're looking right at it. Now a separate flag, so opening the panel
+  // still shows it (nothing to look at yet) but sending your own message
+  // just quietly refreshes in place.
+  if (showSpinner && wrap) wrap.innerHTML = CHAT_SPINNER_HTML;
   try {
     const res = await fetch(SCRIPT_URL + '?action=getChatMessages&channel=team&token=' + encodeURIComponent(getIdentityToken() || '') + '&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' });
     const r = await res.json();
@@ -2598,20 +2708,6 @@ function renderChatMessages(container, messages) {
 }
 function scrollChatToBottom(id) { const el = document.getElementById(id); if (el) el.scrollTop = el.scrollHeight; }
 
-async function sendTeamChatMessage() {
-  if (!getIdentity()) { promptIdentity(true); return; }
-  const input = document.getElementById('chat-input');
-  const msg = input.value.trim();
-  if (!msg) return;
-  input.value = '';
-  try {
-    const res = await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'sendChatMessage', token: getIdentityToken(), data: { Channel: 'team', Message: msg } }) });
-    const r = await res.json();
-    if (handleChatAuthError(r)) return;
-    if (r.error) { showToast(r.error, 'error'); return; }
-    loadTeamChat(true);
-  } catch (e) { showToast('Failed to send message', 'error'); }
-}
 
 // ── Unread badge ─────────────────────────────────────────────
 async function refreshChatBadge() {
@@ -2666,6 +2762,78 @@ async function clearAllChatNotifications() {
 }
 
 // ── Per-task discussion thread (injected into the task drawer) ──
+// ═════════════════════════════════════
+//  SUB-TASK CHECKLIST (Master Tasks only)
+// ═════════════════════════════════════
+// Checklist completion feeds into % Progress by interpolation within the
+// current status's range — see computeInterpolatedProgress in code.gs.
+// Checking the LAST item does NOT change Status itself; it just moves
+// progress to the top of the current range. Moving the task forward still
+// needs an explicit Status change.
+function checklistHTML(taskId) {
+  return '<div id="task-checklist-wrap" style="margin-top:16px">'
+    + '<div style="font-size:11px;font-weight:700;font-family:\'Space Mono\',monospace;color:var(--muted);margin-bottom:8px">✅ CHECKLIST</div>'
+    + '<div id="task-checklist-items"><div class="chat-empty">Loading…</div></div>'
+    + '<div style="display:flex;gap:6px;margin-top:8px">'
+    + '<input type="text" class="form-input" id="task-checklist-input" placeholder="Add a checklist item…" style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addTaskChecklistItem(\'' + escQ(taskId) + '\');}">'
+    + '<button type="button" class="btn-secondary" onclick="addTaskChecklistItem(\'' + escQ(taskId) + '\')">Add</button>'
+    + '</div></div>';
+}
+async function loadTaskChecklist(taskId) {
+  const wrap = document.getElementById('task-checklist-items');
+  if (!wrap) return;
+  if (!getIdentity()) { wrap.innerHTML = '<div class="chat-empty">Log in to view the checklist.</div>'; return; }
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getTaskChecklist&taskId=' + encodeURIComponent(taskId) + '&token=' + encodeURIComponent(getIdentityToken()||'') + '&_=' + Date.now(), { redirect:'follow', cache:'no-store' });
+    const r = await res.json();
+    if (r.error) { wrap.innerHTML = '<div class="chat-empty">'+r.error+'</div>'; return; }
+    renderTaskChecklist(taskId, r.items || []);
+  } catch(e) { wrap.innerHTML = '<div class="chat-empty">Failed to load checklist.</div>'; }
+}
+function renderTaskChecklist(taskId, items) {
+  const wrap = document.getElementById('task-checklist-items');
+  if (!wrap) return;
+  if (!items.length) { wrap.innerHTML = '<div class="chat-empty">No checklist items yet.</div>'; return; }
+  const done = items.filter(i=>String(i.Done).trim().toUpperCase()==='Y').length;
+  wrap.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">'+done+' / '+items.length+' done</div>'
+    + items.map(it => {
+      const checked = String(it.Done).trim().toUpperCase()==='Y';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0">'
+        + '<input type="checkbox" '+(checked?'checked':'')+' onchange="toggleTaskChecklistItem(\''+escQ(it.ID)+'\',\''+escQ(taskId)+'\',this.checked)">'
+        + '<span style="flex:1;font-size:13px;'+(checked?'text-decoration:line-through;color:var(--muted)':'')+'">'+it.Description+'</span>'
+        + '<button type="button" class="btn-sm" style="opacity:0.6" title="Delete" onclick="deleteTaskChecklistItem(\''+escQ(it.ID)+'\',\''+escQ(taskId)+'\')">✕</button>'
+        + '</div>';
+    }).join('');
+}
+async function addTaskChecklistItem(taskId) {
+  const input = document.getElementById('task-checklist-input');
+  const desc = input.value.trim();
+  if (!desc) return;
+  input.value = '';
+  try {
+    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({action:'addChecklistItem', taskId, description:desc, token:getIdentityToken()})});
+    const r = await res.json();
+    if (r.error) { showToast(r.error, 'error'); return; }
+    loadTaskChecklist(taskId); loadData();
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+async function toggleTaskChecklistItem(itemId, taskId, checked) {
+  try {
+    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({action:'toggleChecklistItem', itemId, taskId, done:checked, token:getIdentityToken()})});
+    const r = await res.json();
+    if (r.error) { showToast(r.error, 'error'); return; }
+    loadTaskChecklist(taskId); loadData();
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+async function deleteTaskChecklistItem(itemId, taskId) {
+  try {
+    const res = await fetch(SCRIPT_URL, {method:'POST', redirect:'follow', body:JSON.stringify({action:'deleteChecklistItem', itemId, taskId, token:getIdentityToken()})});
+    const r = await res.json();
+    if (r.error) { showToast(r.error, 'error'); return; }
+    loadTaskChecklist(taskId); loadData();
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
 function taskThreadHTML(taskId) {
   return '<div id="task-thread-wrap">'
     + '<div style="font-size:11px;font-weight:700;font-family:\'Space Mono\',monospace;color:var(--muted);margin-bottom:8px">💬 DISCUSSION</div>'
@@ -2684,6 +2852,7 @@ async function loadTaskThread(taskId) {
     const res = await fetch(SCRIPT_URL + '?action=getChatMessages&channel=task&taskId=' + encodeURIComponent(taskId) + '&token=' + encodeURIComponent(getIdentityToken() || '') + '&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' });
     const r = await res.json();
     if (handleChatAuthError(r)) { wrap.innerHTML = '<div class="chat-empty">Log in (💬 Chat) to join the discussion.</div>'; return; }
+    if (r.error === 'Access denied.') { wrap.innerHTML = '<div class="chat-empty">You don\'t have access to this task\'s discussion.</div>'; return; }
     renderChatMessages(wrap, r.messages || []);
     scrollChatToBottom('task-thread-msgs');
     markChatReadRemote(taskId);
@@ -2713,8 +2882,8 @@ function urlBase64ToUint8Array(base64String) {
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
   return out;
 }
-async function refreshNotifyButtonState() {
-  const btn = document.getElementById('chat-notify-btn');
+async function refreshNotifyButtonState(btnId) {
+  const btn = document.getElementById(btnId || 'chat-notify-btn');
   if (!btn) return;
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) { btn.style.display = 'none'; return; }
   try {
@@ -2723,8 +2892,8 @@ async function refreshNotifyButtonState() {
     btn.textContent = sub ? '🔕 Disable notifications' : '🔔 Enable notifications';
   } catch (e) { /* silent */ }
 }
-async function toggleChatNotifications() {
-  const btn = document.getElementById('chat-notify-btn');
+async function toggleChatNotifications(btnId) {
+  const btn = document.getElementById(btnId || 'chat-notify-btn');
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) { showToast('Push notifications not supported in this browser', 'error'); return; }
   if (!getIdentity()) { promptIdentity(true); return; }
   const token = getIdentityToken();
@@ -2735,7 +2904,7 @@ async function toggleChatNotifications() {
       await existing.unsubscribe();
       const r = await (await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'removePushSubscription', token }) })).json();
       handleChatAuthError(r);
-      btn.textContent = '🔔 Enable notifications';
+      if (btn) btn.textContent = '🔔 Enable notifications';
       showToast('Notifications turned off', 'success');
       return;
     }
@@ -2744,7 +2913,7 @@ async function toggleChatNotifications() {
     const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
     const r = await (await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'savePushSubscription', token, subscription: sub.toJSON() }) })).json();
     if (handleChatAuthError(r)) return;
-    btn.textContent = '🔕 Disable notifications';
+    if (btn) btn.textContent = '🔕 Disable notifications';
     showToast('Notifications enabled ✓', 'success');
   } catch (e) { showToast('Could not enable notifications: ' + e.message, 'error'); }
 }
@@ -2770,9 +2939,9 @@ function renderMyTasks() {
     return;
   }
 
+  const whoCanon = canonicalizeName(who.trim()).toUpperCase();
   let tasks = (appData.tasks || []).filter(t => {
-    const w = who.trim().toLowerCase();
-    return String(t['Assigned To'] ?? '').split(/[,\/&+]+/).map(n => n.trim().toLowerCase()).includes(w);
+    return String(t['Assigned To'] ?? '').split(/[,\/&+]+/).map(n => canonicalizeName(n.trim()).toUpperCase()).includes(whoCanon);
   });
 
   if (myTasksFilter === 'all')     tasks = tasks.filter(t => t.Status !== 'Done');
@@ -2799,7 +2968,7 @@ function renderMyTasks() {
     const pct = parseInt(t['% Progress']) || 0;
     return '<div style="background:var(--surface2);border:1px solid var(--border'+(isOverdue?'2':'')+')'+(isOverdue?';border-left:3px solid var(--danger)':'')+';border-radius:10px;padding:14px;margin-bottom:10px">'
       + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">'
-      +   '<div style="font-size:13px;font-weight:700;line-height:1.4;word-break:break-word;flex:1">' + t['Task Description'] + depChipsHtml(t) + '</div>'
+      +   '<div style="font-size:13px;font-weight:700;line-height:1.4;word-break:break-word;flex:1">' + t['Task Description'] + depChipsHtml(t) + blockedByMeChipsHtml(t) + checklistChipHtml(t) + '</div>'
       +   '<div style="display:flex;gap:4px;flex-shrink:0">' + priorityBadge(t.Priority) + '</div>'
       + '</div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px">'
@@ -2813,7 +2982,7 @@ function renderMyTasks() {
       + '</div>'
       + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
       +   '<select style="flex:1;min-width:120px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:5px 8px;font-size:11px;font-family:Space Mono,monospace;cursor:pointer" onchange="quickStatusUpdate(\''+escQ(t.ID)+'\',this.value,\''+escQ(who)+'\',this)">'
-      +     ['Not Started','In Progress','Done','Blocked','Cancelled'].map(s=>'<option value="'+s+'"'+(s===t.Status?' selected':'')+'>'+s+'</option>').join('')
+      +     ['Not Started','Acknowledged','In Progress','Revisions Needed','In Review','Done','Blocked','Cancelled'].map(s=>'<option value="'+s+'"'+(s===t.Status?' selected':'')+'>'+s+'</option>').join('')
       +   '</select>'
       +   '<button class="btn-sm" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Edit</button>'
       + '</div>'
@@ -2825,6 +2994,13 @@ function renderMyTasks() {
   }).join('');
 }
 
+// Client-side mirror of code.gs's PROGRESS_LADDERS — Master Tasks only,
+// used ONLY for instant optimistic UI after a quick status change here.
+// The server remains the source of truth; loadData() right after this
+// reconciles with whatever it actually computed.
+const CLIENT_PROGRESS_LADDER_TASKS = {
+  'Not Started':0,'Acknowledged':10,'In Progress':40,'Revisions Needed':25,'In Review':80,'Done':100
+};
 async function quickStatusUpdate(taskId, newStatus, who, selectEl) {
   selectEl.disabled = true;
   try {
@@ -2834,7 +3010,12 @@ async function quickStatusUpdate(taskId, newStatus, who, selectEl) {
     showToast('Status → '+newStatus, 'success');
     // Optimistically update local data so My Tasks re-renders immediately
     const task = (appData.tasks||[]).find(t=>String(t.ID)===String(taskId));
-    if(task) { task.Status=newStatus; task.Last_Updated=new Date().toISOString(); }
+    if(task) {
+      task.Status=newStatus; task.Last_Updated=new Date().toISOString();
+      if (Object.prototype.hasOwnProperty.call(CLIENT_PROGRESS_LADDER_TASKS, newStatus)) {
+        task['% Progress'] = CLIENT_PROGRESS_LADDER_TASKS[newStatus]; // frozen statuses (Blocked/Cancelled) fall through, left untouched
+      }
+    }
     renderMyTasks();
     loadData(); // background reload for full sync
   } catch(e) {
@@ -2870,6 +3051,7 @@ async function submitLogin() {
     leaderToken=r.token; leaderName=r.name;
     sessionStorage.setItem('nexus_leader_token',leaderToken);
     sessionStorage.setItem('nexus_leader_name',leaderName);
+    if (r.picture) localStorage.setItem('nexus_team_picture', r.picture); else localStorage.removeItem('nexus_team_picture');
     document.getElementById('login-pass').value='';
     closeLoginModal(); updateLeaderUI(); showToast('Welcome '+leaderName,'success');
     await loadData();
@@ -2894,6 +3076,30 @@ async function logoutLeader() {
   updateLeaderUI(); updateChatIdentityLine(); refreshChatBadge();
   showToast('Signed out','success');
   document.getElementById('login-modal').classList.add('show'); initGoogleSignIn();
+}
+
+function openProfileModal() {
+  const name = getIdentity();
+  if (!name) { openLoginModal(); return; }
+  const leaderFlag = isLeader();
+  document.getElementById('profile-name-text').textContent = name;
+  document.getElementById('profile-role-pill').textContent = leaderFlag ? 'Leader' : 'Team Member';
+  const email = getTeamEmail(name);
+  document.getElementById('profile-email').textContent = email || '';
+  document.getElementById('profile-change-pw-btn').style.display = leaderFlag ? 'block' : 'none';
+  const avatarWrap = document.getElementById('profile-avatar-wrap');
+  const pic = getTeamPicture();
+  if (pic) {
+    avatarWrap.innerHTML = '<img class="profile-avatar" src="' + pic.replace(/"/g,'&quot;') + '" alt="' + name.replace(/"/g,'&quot;') + '">';
+  } else {
+    const initials = name.trim().split(/\s+/).map(p => p[0]).slice(0,2).join('').toUpperCase();
+    avatarWrap.innerHTML = '<div class="profile-avatar-fallback">' + initials + '</div>';
+  }
+  document.getElementById('profile-modal').classList.add('show');
+  refreshNotifyButtonState('profile-notify-btn');
+}
+function closeProfileModal() {
+  document.getElementById('profile-modal').classList.remove('show');
 }
 
 function togglePwVisibility(inputId, btn) {
@@ -2940,22 +3146,28 @@ async function submitChangePassword() {
   btn.disabled=false; btn.textContent=origText;
 }
 
+// Mirrors isTrustedForTab(name,'NewButton') in code.gs, computed client-side
+// off appData.team (already sent to every logged-in user, not leader-gated).
+// Leaders always pass via the existing .is-leader CSS exception; this only
+// matters for a non-leader who's been granted the 4th Team Directory toggle.
+function refreshAddButtonAccess() {
+  const name = getIdentity();
+  const trusted = !!name && (appData.team||[]).some(r =>
+    String(r['Name']||'').trim()===name && String(r['Trusted_NewButton']||'').trim().toUpperCase()==='Y'
+  );
+  document.body.classList.toggle('can-add-new', trusted);
+}
+
 function updateLeaderUI() {
   const leaderFlag=isLeader();
   const displayName=getIdentity()||'';
   const loggedIn=!!displayName; // any valid session — leader OR regular team member
   document.getElementById('leader-badge').classList.toggle('show',leaderFlag);
-  document.getElementById('topbar-leader-pill').classList.toggle('show',leaderFlag);
+  document.body.classList.toggle('is-leader', leaderFlag);
   if(leaderFlag) document.getElementById('lb-name-text').textContent=displayName;
-  // Was: no equivalent signal existed for a logged-in-but-not-leader team
-  // member — the login button just kept saying "Login" even after they'd
-  // successfully signed in, with nothing to confirm the session actually
-  // took (vs. just having tapped a Google button). Mirrors the leader
-  // badge/pill above, in teal instead of purple, so every team member gets
-  // the same "yes, you're really logged in" confirmation leaders already had.
   const memberOnly = loggedIn && !leaderFlag;
   document.getElementById('member-badge').classList.toggle('show',memberOnly);
-  document.getElementById('topbar-member-pill').classList.toggle('show',memberOnly);
+  document.body.classList.toggle('is-member', memberOnly);
   if(memberOnly) document.getElementById('mb-name-text').textContent=displayName;
   const lb=document.getElementById('btn-login');
   if(lb) { lb.textContent=loggedIn?('⚡ '+displayName.split(' ')[0]):'Login'; lb.style.color=leaderFlag?'var(--accent2)':(loggedIn?'var(--accent2)':'#8880ff'); }
@@ -2965,12 +3177,16 @@ function updateLeaderUI() {
   if(stb) stb.textContent=(document.documentElement.getAttribute('data-theme')==='light'?'🌙':'☀')+' Theme';
   const teamNav=document.getElementById('nav-team-item');
   if(teamNav) teamNav.style.display=leaderFlag?'flex':'none';
+  const reviewNav=document.getElementById('nav-review-item');
+  if(reviewNav) reviewNav.style.display=leaderFlag?'flex':'none';
   const kpiNav=document.getElementById('nav-kpi-item');
   if(kpiNav) kpiNav.style.display=leaderFlag?'flex':'none';
   // If a non-leader is sitting on the Activity Log view when their session
   // ends (or never had access), bounce them out rather than leaving a now-
   // hidden nav item as the only way back to a visible view.
   if(!leaderFlag && currentView==='kpi') loadView('dashboard');
+  if(!leaderFlag && currentView==='review') loadView('dashboard');
+  refreshAddButtonAccess();
 }
 
 // ============================================================
@@ -3140,8 +3356,10 @@ function generateForm() {
   if(assignedToEl && assignedToEl.value) autoFillEmailField(assignedToEl.value, 'Assigned_To_Email');
   const supportPersonEl = body.querySelector('.form-input[name="Support Person"]');
   if(supportPersonEl && supportPersonEl.value) autoFillEmailField(supportPersonEl.value, 'Support_Person_Email');
-  // Per-task discussion thread — only for existing Master Tasks rows
+  // Per-task discussion thread + checklist — only for existing Master Tasks rows
   if (currentTab === '1. Master Tasks' && editingRowId) {
+    body.insertAdjacentHTML('beforeend', checklistHTML(editingRowId));
+    loadTaskChecklist(editingRowId);
     body.insertAdjacentHTML('beforeend', taskThreadHTML(editingRowId));
     loadTaskThread(editingRowId);
   }
@@ -3839,6 +4057,116 @@ if ('serviceWorker' in navigator) {
     })(0);
   });
 }
+
+// ── Column-visibility picker ───────────────────────────────────
+const COL_DEFS = {
+  'tasks-table':     [{l:'ID',i:1},{l:'Task',i:2},{l:'Priority',i:3},{l:'Assigned To',i:4},{l:'Supervisor',i:5},{l:'Dept',i:6},{l:'Deadline',i:7},{l:'Status',i:8},{l:'Progress',i:9}],
+  'cos-table':       [{l:'State',i:1},{l:'Admin',i:2},{l:'Phone',i:3},{l:'Email',i:4},{l:'WhatsApp',i:5},{l:'Members',i:6},{l:'Status',i:7},{l:'Progress',i:8},{l:'Launched',i:9}],
+  'partners-table':  [{l:'Assigned',i:1},{l:'Organisation',i:2},{l:'Contact',i:3},{l:'Type',i:4},{l:'Status',i:5},{l:'Progress',i:6},{l:'Follow-Up',i:7},{l:'MoU',i:8}],
+  'org-table':       [{l:'Organisation',i:1},{l:'Industry',i:2},{l:'State',i:3},{l:'Contact',i:4},{l:'Email',i:5},{l:'Phone',i:6},{l:'Status',i:7}],
+  'kpi-table':       [{l:'Date',i:1},{l:'Day',i:2},{l:'Member',i:3},{l:'Role',i:4},{l:'Completed',i:5},{l:'Achievement',i:6},{l:'Blockers',i:7},{l:'Filed',i:8}],
+  'marketing-table': [{l:'ID',i:1},{l:'Type',i:2},{l:'Topic',i:3},{l:'Platform',i:4},{l:'Assigned',i:5},{l:'Due',i:6},{l:'Status',i:7},{l:'Link',i:8}],
+};
+
+let _colPickerOpen = null;
+
+function _getHiddenCols(tableId) {
+  try { return JSON.parse(localStorage.getItem('nexus_cols_' + tableId) || '[]'); } catch(e) { return []; }
+}
+function _setHiddenCols(tableId, arr) {
+  localStorage.setItem('nexus_cols_' + tableId, JSON.stringify(arr));
+}
+
+function applyColVisibility() {
+  let styleEl = document.getElementById('col-vis-style');
+  if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'col-vis-style'; document.head.appendChild(styleEl); }
+  const rules = [];
+  Object.keys(COL_DEFS).forEach(tid => {
+    _getHiddenCols(tid).forEach(idx => {
+      rules.push('#' + tid + ' thead tr th:nth-child(' + idx + '),#' + tid + ' tbody tr td:nth-child(' + idx + '){display:none}');
+    });
+  });
+  styleEl.textContent = rules.join('\n');
+}
+
+function openColPicker(tableId, btn) {
+  if (_colPickerOpen === tableId) { closeColPicker(); return; }
+  closeColPicker();
+  _colPickerOpen = tableId;
+  const cols = COL_DEFS[tableId];
+  if (!cols) return;
+  const hidden = new Set(_getHiddenCols(tableId));
+  const panel = document.createElement('div');
+  panel.id = 'col-picker-panel';
+  panel.className = 'col-picker';
+  panel.innerHTML = '<div class="col-picker-title">Show / Hide Columns</div>'
+    + cols.map(c => '<label><input type="checkbox"' + (!hidden.has(c.i) ? ' checked' : '') + ' onchange="toggleCol(\'' + tableId + '\',' + c.i + ',this.checked)">' + c.l + '</label>').join('')
+    + '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:6px"><button class="btn-sm" style="font-size:10px;width:100%;box-sizing:border-box" onclick="resetCols(\'' + tableId + '\')">Reset all</button></div>';
+  document.body.appendChild(panel);
+  const r = btn.getBoundingClientRect();
+  const panelW = panel.offsetWidth || 180;
+  panel.style.top  = (r.bottom + 6) + 'px';
+  panel.style.left = Math.min(r.left, window.innerWidth - panelW - 12) + 'px';
+  btn.dataset.colPickerActive = '1';
+}
+
+function closeColPicker() {
+  const p = document.getElementById('col-picker-panel');
+  if (p) p.remove();
+  document.querySelectorAll('[data-col-picker-active]').forEach(b => delete b.dataset.colPickerActive);
+  _colPickerOpen = null;
+}
+
+function toggleCol(tableId, idx, visible) {
+  let hidden = _getHiddenCols(tableId);
+  if (visible) hidden = hidden.filter(i => i !== idx);
+  else if (!hidden.includes(idx)) hidden.push(idx);
+  _setHiddenCols(tableId, hidden);
+  applyColVisibility();
+}
+
+function resetCols(tableId) {
+  localStorage.removeItem('nexus_cols_' + tableId);
+  applyColVisibility();
+  closeColPicker();
+}
+
+document.addEventListener('click', e => {
+  if (_colPickerOpen && !e.target.closest('#col-picker-panel') && !e.target.closest('[data-col-picker-active]')) closeColPicker();
+}, true);
+
+// ── Pull-to-refresh (mobile Sync replacement) ─────────────────
+(function() {
+  const PTR_THRESHOLD = 65; // px drag needed to trigger
+  let _ptrStartY = 0, _ptrActive = false, _ptrTriggered = false;
+  const indicator = () => document.getElementById('ptr-indicator');
+  const content   = () => document.getElementById('content');
+
+  document.addEventListener('touchstart', e => {
+    const c = content();
+    if (!c || c.scrollTop > 0) return; // only from true top
+    _ptrStartY   = e.touches[0].clientY;
+    _ptrActive   = true;
+    _ptrTriggered = false;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!_ptrActive) return;
+    const dy = e.touches[0].clientY - _ptrStartY;
+    if (dy <= 0) { _ptrActive = false; return; }
+    const ind = indicator();
+    if (ind) ind.classList.toggle('visible', dy >= PTR_THRESHOLD);
+    _ptrTriggered = dy >= PTR_THRESHOLD;
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    if (!_ptrActive) return;
+    _ptrActive = false;
+    const ind = indicator();
+    if (ind) ind.classList.remove('visible');
+    if (_ptrTriggered) { _ptrTriggered = false; syncData(); }
+  });
+})();
 
 // ── Apply saved theme on load ─────────────────────────────────
 (function(){
