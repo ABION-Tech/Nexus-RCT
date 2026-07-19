@@ -1197,11 +1197,20 @@
         <div id="team-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
       </div>
 
-      <!-- REVIEW QUEUE (Fireflies meeting action items) -->
+      <!-- REVIEW QUEUE (Fireflies meeting action items + manual AI extraction) -->
       <div id="view-review" class="view">
         <div class="card-head" style="padding:0 0 16px">
           <h3>Review Queue</h3>
           <span class="sub">Action items extracted from meetings — nothing here reaches Master Tasks until you approve it.</span>
+        </div>
+        <div class="card" style="padding:14px;margin-bottom:16px">
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px">🤖 Extract tasks from meeting notes</div>
+          <div class="sub" style="margin-bottom:8px">Paste raw notes or a transcript — no Fireflies or n8n needed. AI pulls out action items and drops them below for you to review.</div>
+          <textarea class="form-input" id="ai-extract-text" rows="5" style="width:100%;margin-bottom:8px" placeholder="Paste meeting notes or transcript here..."></textarea>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-primary" id="ai-extract-btn" onclick="submitAIExtract()">Extract Tasks</button>
+            <span id="ai-extract-status" class="sub"></span>
+          </div>
         </div>
         <div id="review-list" style="display:flex;flex-direction:column;gap:10px"></div>
       </div>
@@ -2228,6 +2237,42 @@ async function loadReviewQueue() {
     renderReviewQueue(r.items || []);
   } catch(e) {
     listEl.innerHTML = '<div class="sub">Failed to load — '+e.message+'</div>';
+  }
+}
+
+// Wired to the "Extract Tasks" button in the AI-extract card above the
+// review list. Manual trigger only, on purpose — no auto-run on paste, no
+// polling. Leader-only server-side (extractMeetingTasksAI checks the
+// token itself); this just handles the request/response and refreshes the
+// queue underneath it so the new items are visible immediately.
+async function submitAIExtract() {
+  const textEl = document.getElementById('ai-extract-text');
+  const statusEl = document.getElementById('ai-extract-status');
+  const btn = document.getElementById('ai-extract-btn');
+  const text = (textEl.value || '').trim();
+  if (!text) { showToast('Paste some meeting notes first', 'error'); return; }
+  btn.disabled = true;
+  statusEl.textContent = 'Extracting… (can take a few seconds)';
+  try {
+    const res = await fetch(SCRIPT_URL, { method:'POST', redirect:'follow', body: JSON.stringify({
+      action:'extractMeetingTasksAI', transcript:text, token:getIdentityToken()||''
+    })});
+    const r = await res.json();
+    if (r.error) { statusEl.textContent = ''; showToast(r.error, 'error'); return; }
+    if (!r.created) {
+      statusEl.textContent = '';
+      showToast(r.message || 'No action items found in that text', 'success');
+      return;
+    }
+    textEl.value = '';
+    statusEl.textContent = '';
+    showToast(r.created + ' task' + (r.created===1?'':'s') + ' extracted — review below', 'success');
+    loadReviewQueue();
+  } catch(e) {
+    statusEl.textContent = '';
+    showToast('Network error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
   }
 }
 function renderReviewQueue(items) {
