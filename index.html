@@ -1101,7 +1101,7 @@
       <div id="view-cos" class="view">
         <div class="card">
           <div class="card-head"><h3>COS Database</h3><div style="display:flex;gap:6px"><button class="btn-sm" onclick="exportCSV('cos')">Export CSV</button><button class="btn-sm" onclick="openColPicker('cos-table',this)">Cols ▾</button></div></div>
-          <div class="table-wrap"><table id="cos-table" class="data-table"><thead><tr><th>State</th><th>Admin</th><th>Phone</th><th>Email</th><th>WhatsApp</th><th>Members</th><th>Status</th><th>Progress</th><th>Launched</th><th></th></tr></thead><tbody id="cos-tbody"></tbody></table></div>
+          <div class="table-wrap"><table id="cos-table" class="data-table"><thead><tr><th>State</th><th>Admin</th><th>Phone</th><th>Email</th><th>WhatsApp</th><th>Members</th><th>Status</th><th>Progress</th><th>Launched</th><th>Report</th><th></th></tr></thead><tbody id="cos-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -2093,9 +2093,40 @@ function renderTasks() {
   }).join('')||noDataRow(10,'No tasks');
 }
 
+// ── STATE SECURITY REPORT (COS tab) ────────────────────────────
+// Builds the same kind of scoped Google search the team was already doing
+// manually (state name + security/crime keywords + trusted NG news/gov
+// sources), scoped to a time window. No scraping/API involved — this is
+// just a well-formed link to Google's own live results.
+// NOTE: this keyword/source list is duplicated server-side in code.gs
+// (buildSecurityQuery_) for the email action — keep both in sync if edited.
+const SECURITY_REPORT_KEYWORDS = '(security OR crime OR kidnapping OR robbery OR bandit* OR terrorism OR cultism OR protest OR riot OR "communal clash" OR accident OR "road accident" OR fire OR flood OR emergency OR "building collapse" OR explosion OR "missing person" OR "wanted person" OR "traffic advisory" OR "road closure" OR police OR FRSC OR NEMA OR NSCDC OR DSS OR "public safety" OR outbreak OR cholera OR Lassa OR "weather warning")';
+const SECURITY_REPORT_SOURCES  = '(site:police.gov.ng OR site:frsc.gov.ng OR site:nema.gov.ng OR site:nscdc.gov.ng OR site:gov.ng OR site:channels.tv OR site:thecable.ng OR site:premiumtimesng.com OR site:punchng.com OR site:vanguardngr.com OR site:guardian.ng OR site:dailytrust.com OR site:leadership.ng OR site:tribuneonlineng.com)';
+function securityReportUrl(state, tbs) {
+  const q = '("' + state + '") ' + SECURITY_REPORT_KEYWORDS + ' ' + SECURITY_REPORT_SOURCES;
+  return 'https://www.google.com/search?tbs=' + tbs + '&q=' + encodeURIComponent(q);
+}
+function openSecurityReport(state, tbs) {
+  window.open(securityReportUrl(state, tbs), '_blank');
+}
+async function emailSecurityReport(state, btn) {
+  const original = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const res = await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'sendStateSecurityReport', state, token: getIdentityToken()||'' }) });
+    const r = await res.json();
+    if (r.error) { showToast(r.error, 'error'); return; }
+    showToast('Report links emailed to ' + (r.sentTo || 'the state admin'), 'success');
+  } catch(e) {
+    showToast('Could not send report: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = original; }
+  }
+}
+
 function renderCOS() {
   const cos=appData.cos||[];
-  document.getElementById('cos-tbody').innerHTML = cos.map(c=>'<tr><td>'+c.State+'</td><td>'+c['Admin Name']+'</td><td>'+(c['Admin Phone']||'--')+'</td><td>'+(c['Admin Email']||'--')+'</td><td>'+statusBadge(c['WhatsApp Group Created']==='Yes'?'Active':'Pending')+'</td><td>'+(c['Members Count']||0)+'</td><td>'+statusBadge(c.Status)+'</td><td>'+progressBar(c['% Progress'])+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(c['Last Report Date']||'--')+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(c.State)+'\',\'2. COS\')">Edit</button></td></tr>').join('')||noDataRow(10,'No COS data');
+  document.getElementById('cos-tbody').innerHTML = cos.map(c=>'<tr><td>'+c.State+'</td><td>'+c['Admin Name']+'</td><td>'+(c['Admin Phone']||'--')+'</td><td>'+(c['Admin Email']||'--')+'</td><td>'+statusBadge(c['WhatsApp Group Created']==='Yes'?'Active':'Pending')+'</td><td>'+(c['Members Count']||0)+'</td><td>'+statusBadge(c.Status)+'</td><td>'+progressBar(c['% Progress'])+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+(c['Last Report Date']||'--')+'</td><td style="white-space:nowrap"><button class="btn-sm" title="Open last-24h security search for this state" onclick="openSecurityReport(\''+escQ(c.State)+'\',\'d\')">🔗 Open</button> <button class="btn-sm" title="Email the search links to the state admin" onclick="emailSecurityReport(\''+escQ(c.State)+'\',this)">✉️ Email</button></td><td><button class="btn-sm" onclick="editRow(\''+escQ(c.State)+'\',\'2. COS\')">Edit</button></td></tr>').join('')||noDataRow(11,'No COS data');
 }
 
 function renderPartners() {
@@ -3400,7 +3431,10 @@ function updateLeaderUI() {
   document.body.classList.toggle('is-member', memberOnly);
   if(memberOnly) document.getElementById('mb-name-text').textContent=displayName;
   const lb=document.getElementById('btn-login');
-  if(lb) { lb.textContent=loggedIn?('⚡ '+displayName.split(' ')[0]):'Login'; lb.style.color=leaderFlag?'var(--accent2)':(loggedIn?'var(--accent2)':'#8880ff'); }
+  // Hidden once logged in — same redundancy as su-login-btn: the sidebar
+  // badge already shows the name, and clicking this while logged in just
+  // re-opened the login modal to no effect.
+  if(lb) { lb.style.display=loggedIn?'none':''; lb.textContent='Login'; lb.style.color='#8880ff'; }
   const slb=document.getElementById('su-login-btn');
   // Hidden once logged in — the leader/member badge above already shows
   // the same name; keeping this button too was a redundant "⚡ Ayo".
@@ -4515,6 +4549,5 @@ document.addEventListener('click', e => {
   if (btn) btn.textContent = t === 'light' ? '🌙' : '☀';
 })();
 </script>
-<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
