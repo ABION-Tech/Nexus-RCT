@@ -50,8 +50,15 @@
       #sidebar.collapsed .lb-role,
       #sidebar.collapsed .lb-logout,
       #sidebar.collapsed .sidebar-footer p { display: none; }
-      #sidebar.collapsed .sidebar-logo .wordmark { font-size: 0; }
-      #sidebar.collapsed .sidebar-logo .wordmark::after { content: 'N'; font-size: 20px; font-weight: 800; color: var(--accent2); }
+      #sidebar.collapsed .sidebar-logo .wordmark { font-size: 0; letter-spacing: 0; }
+      #sidebar.collapsed .sidebar-logo .wordmark::after { content: 'N'; font-size: 20px; font-weight: 800; color: var(--accent2); letter-spacing: normal; }
+      /* The logo row is inline-styled as a horizontal flex (text + collapse
+         button side by side); at 60px wide that has no room left once the
+         "N" and button both need space, which is what broke/wrapped before.
+         Stack them vertically instead — !important needed to beat the
+         inline style's justify-content/flex-direction. */
+      #sidebar.collapsed .sidebar-logo { flex-direction: column !important; justify-content: center !important; padding: 14px 6px !important; gap: 10px !important; }
+      #sidebar.collapsed .sidebar-logo > div:first-child { text-align: center; }
       #sidebar.collapsed .nav-item { font-size: 0; justify-content: center; gap: 0; padding: 8px; }
       #sidebar.collapsed .nav-item .badge { display: none; }
       #sidebar.collapsed .lb-name { font-size: 0; text-align: center; }
@@ -106,6 +113,11 @@
     .top-btn:hover { transform: scale(1.04); }
     .btn-sync { background: rgba(91,82,240,0.1); border-color: rgba(91,82,240,0.25); color: #8880ff; }
     .btn-sync.loading { opacity: 0.6; pointer-events: none; }
+    /* Notification toggle buttons — spinner shown while the push
+       subscribe/unsubscribe request is in flight. */
+    .btn-sm.notify-loading, .btn-secondary.notify-loading { opacity: 0.65; pointer-events: none; }
+    .notify-spinner { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px;
+      border: 2px solid rgba(255,255,255,0.25); border-top-color: currentColor; border-radius: 50%; animation: spin 0.7s linear infinite; }
     .btn-add { background: var(--accent); border-color: var(--accent); color: white; }
     /* Role×device header visibility — toggled via body.is-leader / body.is-member */
     #btn-mytasks-panel, #btn-sync { display: none; }
@@ -225,6 +237,24 @@
     .dep-chip.done { background: rgba(0,212,160,0.1); color: var(--accent2); border: 1px solid rgba(0,212,160,0.2); }
     .dep-chip.pending { background: rgba(240,80,96,0.1); color: #f08090; border: 1px solid rgba(240,80,96,0.2); }
     .dep-chip.unknown { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
+    /* Depends-On task picker — dropdown of existing tasks, defaults to
+       active (non-Done/Cancelled) tasks with a toggle to widen the search. */
+    .taskdeps-wrap { position: relative; }
+    .taskdeps-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+    .taskdeps-pills:empty { display: none; }
+    .taskdeps-pills .dep-chip { margin-right: 0; cursor: default; display: inline-flex; align-items: center; gap: 4px; }
+    .taskdeps-pills .dep-chip .dep-chip-x { cursor: pointer; opacity: 0.7; font-weight: 700; }
+    .taskdeps-pills .dep-chip .dep-chip-x:hover { opacity: 1; }
+    .taskdeps-toggle { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; margin-top: 6px; cursor: pointer; }
+    .taskdeps-toggle input { margin: 0; }
+    .taskdeps-dropdown { display: none; position: absolute; left: 0; right: 0; top: 100%; margin-top: 2px; max-height: 220px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 30; }
+    .taskdeps-dropdown.open { display: block; }
+    .taskdeps-opt { padding: 8px 10px; font-size: 11px; cursor: pointer; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .taskdeps-opt:last-child { border-bottom: none; }
+    .taskdeps-opt:hover { background: var(--surface2); }
+    .taskdeps-opt .tdo-desc { color: var(--muted); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .taskdeps-opt .tdo-id { font-family: 'Space Mono', monospace; font-weight: 700; white-space: nowrap; }
+    .taskdeps-empty { padding: 10px; font-size: 11px; color: var(--muted); text-align: center; }
 
     /* RECURRING BADGE */
     .recur-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; font-family: 'Space Mono', monospace; background: rgba(64,144,240,0.1); color: var(--info); border: 1px solid rgba(64,144,240,0.2); padding: 1px 6px; border-radius: 3px; }
@@ -1358,7 +1388,7 @@ const FORM_SCHEMAS = {
       {key:'Start Date',label:'Start Date',type:'date',immutableOnEdit:true},
       {key:'Deadline',label:'Deadline',type:'date',leaderOnly:true},
       {key:'Deadline_Time',label:'Deadline Time (optional, defaults to 9:00 AM)',type:'time',leaderOnly:true},
-      {key:'Depends On',label:'Depends On (Task ID(s), comma-separated)',type:'text',placeholder:'e.g. 1-17209... , 1-17210...',leaderOnly:true},
+      {key:'Depends On',label:'Depends On',type:'taskdeps',leaderOnly:true},
       {section:'Notes'},
       {key:'Notes',label:'Notes',type:'textarea',placeholder:'Additional context...'},
       {key:'Proof Link',label:'Proof Link',type:'url',placeholder:'https://...'},
@@ -3090,25 +3120,32 @@ async function toggleChatNotifications(btnId) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) { showToast('Push notifications not supported in this browser', 'error'); return; }
   if (!getIdentity()) { promptIdentity(true); return; }
   const token = getIdentityToken();
+  const setLoading = (label) => { if (!btn) return; btn.classList.add('notify-loading'); btn.innerHTML = '<span class="notify-spinner"></span>' + label; };
+  setLoading('Please wait…');
   try {
     const reg = await navigator.serviceWorker.ready;
     const existing = await reg.pushManager.getSubscription();
     if (existing) {
+      setLoading('Disabling…');
       await existing.unsubscribe();
       const r = await (await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'removePushSubscription', token }) })).json();
       handleChatAuthError(r);
-      if (btn) btn.textContent = '🔔 Enable notifications';
+      if (btn) { btn.classList.remove('notify-loading'); btn.textContent = '🔔 Enable notifications'; }
       showToast('Notifications turned off', 'success');
       return;
     }
     const perm = await Notification.requestPermission();
-    if (perm !== 'granted') { showToast('Notification permission denied', 'error'); return; }
+    if (perm !== 'granted') { if (btn) { btn.classList.remove('notify-loading'); btn.textContent = '🔔 Enable notifications'; } showToast('Notification permission denied', 'error'); return; }
+    setLoading('Enabling…');
     const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
     const r = await (await fetch(SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'savePushSubscription', token, subscription: sub.toJSON() }) })).json();
-    if (handleChatAuthError(r)) return;
-    if (btn) btn.textContent = '🔕 Disable notifications';
+    if (handleChatAuthError(r)) { if (btn) btn.classList.remove('notify-loading'); return; }
+    if (btn) { btn.classList.remove('notify-loading'); btn.textContent = '🔕 Disable notifications'; }
     showToast('Notifications enabled ✓', 'success');
-  } catch (e) { showToast('Could not enable notifications: ' + e.message, 'error'); }
+  } catch (e) {
+    if (btn) { btn.classList.remove('notify-loading'); btn.textContent = '🔔 Enable notifications'; }
+    showToast('Could not enable notifications: ' + e.message, 'error');
+  }
 }
 
 function setMyTaskFilter(filter, btn) {
@@ -3365,7 +3402,9 @@ function updateLeaderUI() {
   const lb=document.getElementById('btn-login');
   if(lb) { lb.textContent=loggedIn?('⚡ '+displayName.split(' ')[0]):'Login'; lb.style.color=leaderFlag?'var(--accent2)':(loggedIn?'var(--accent2)':'#8880ff'); }
   const slb=document.getElementById('su-login-btn');
-  if(slb) { slb.textContent=loggedIn?('⚡ '+displayName.split(' ')[0]):'Login'; slb.classList.toggle('green',loggedIn); }
+  // Hidden once logged in — the leader/member badge above already shows
+  // the same name; keeping this button too was a redundant "⚡ Ayo".
+  if(slb) { slb.style.display=loggedIn?'none':''; slb.textContent='Login'; slb.classList.remove('green'); }
   const stb=document.getElementById('su-theme-btn');
   if(stb) stb.textContent=(document.documentElement.getAttribute('data-theme')==='light'?'🌙':'☀')+' Theme';
   const teamNav=document.getElementById('nav-team-item');
@@ -3425,6 +3464,8 @@ function applyDraft(draft) {
     if (el.tagName === 'SELECT' && el.name === 'Support Person') autoFillEmailField(el.value, 'Support_Person_Email');
     const dpWrap = el.closest('.datepicker-wrap');
     if (dpWrap) { const disp = dpWrap.querySelector('.dp-val'); if (disp) disp.textContent = draft.data[name] || 'Select date'; }
+    const tdWrap = el.closest('.taskdeps-wrap');
+    if (tdWrap && tdWrap.refreshTaskDeps) tdWrap.refreshTaskDeps();
   });
 }
 
@@ -3530,6 +3571,15 @@ function generateForm() {
         +'</div>'
         +'<input type="hidden" class="form-input" name="'+escAttr(field.key)+'" value="'+escAttr(resolvedVal)+'"'+(dpLocked?' disabled':'')+'>'
         +'</div>';
+    } else if(field.type==='taskdeps'){
+      const tdId='td-'+escAttr(field.key).replace(/[\s/]/g,'_');
+      input='<div class="taskdeps-wrap" id="'+tdId+'" data-exclude="'+escAttr(rowData?rowData.ID:'')+'">'
+        +'<div class="taskdeps-pills"></div>'
+        +(locked?'':'<input type="text" class="form-input taskdeps-search" placeholder="Search active tasks by ID or description…" autocomplete="off">'
+          +'<div class="taskdeps-dropdown"></div>'
+          +'<label class="taskdeps-toggle"><input type="checkbox" class="taskdeps-showall"> Include Done / Cancelled</label>')
+        +'<input type="hidden" class="form-input" name="'+escAttr(field.key)+'" value="'+escAttr(resolvedVal)+'"'+(locked?' disabled':'')+'>'
+        +'</div>';
     } else if(field.type==='drivelink'){
       input='<div style="display:flex;gap:6px">'
         +'<input type="text" class="form-input" id="drive-link-input" placeholder="Paste a Google Drive link or file ID" style="flex:1">'
@@ -3544,6 +3594,7 @@ function generateForm() {
   });
   // Init all date pickers after DOM is updated
   body.querySelectorAll('.datepicker-wrap').forEach(w=>initDatePicker(w));
+  body.querySelectorAll('.taskdeps-wrap').forEach(w=>initTaskDepsPicker(w));
   // Auto-fill emails if Assigned To / Support Person already have a value (e.g. editing existing row)
   const assignedToEl = body.querySelector('.form-input[name="Assigned To"]');
   if(assignedToEl && assignedToEl.value) autoFillEmailField(assignedToEl.value, 'Assigned_To_Email');
@@ -4201,6 +4252,92 @@ document.addEventListener('click', e => {
     pop.style.display = 'none';
   }
 });
+
+// ── "Depends On" task picker ──────────────────────────────────
+// Search/select UI for the Depends On field. Defaults to active tasks
+// (anything not Done/Cancelled) so the list stays short and relevant;
+// "Include Done / Cancelled" widens it when someone needs to reference
+// a finished task. Selection is stored as the same comma-separated ID
+// list the backend already expects — no schema change needed.
+function initTaskDepsPicker(wrap) {
+  const hidden   = wrap.querySelector('input[type="hidden"]');
+  const pillsEl  = wrap.querySelector('.taskdeps-pills');
+  const searchEl = wrap.querySelector('.taskdeps-search');
+  const ddEl     = wrap.querySelector('.taskdeps-dropdown');
+  const showAllEl= wrap.querySelector('.taskdeps-showall');
+  if (!hidden || !pillsEl) return;
+  const excludeId = wrap.getAttribute('data-exclude') || '';
+  let selected = hidden.value.split(',').map(s=>s.trim()).filter(Boolean);
+
+  function findTask(id) { return (appData.tasks||[]).find(x=>String(x.ID).trim()===String(id).trim()); }
+
+  function renderPills() {
+    pillsEl.innerHTML = selected.map(id => {
+      const t = findTask(id);
+      const cls = !t ? 'unknown' : (t.Status==='Done' ? 'done' : 'pending');
+      const label = !t ? (id+' ?') : (id+(t.Status==='Done'?' ✓':''));
+      const removeBtn = searchEl ? '<span class="dep-chip-x" data-id="'+escAttr(id)+'">✕</span>' : '';
+      return '<span class="dep-chip '+cls+'" title="'+(t?escAttr(t['Task Description']||''):'Task not found')+'">⛓ '+label+removeBtn+'</span>';
+    }).join('');
+    if (searchEl) {
+      pillsEl.querySelectorAll('.dep-chip-x').forEach(x => x.addEventListener('click', () => {
+        selected = selected.filter(id => id !== x.getAttribute('data-id'));
+        hidden.value = selected.join(', ');
+        renderPills();
+        renderDropdown(searchEl.value);
+      }));
+    }
+  }
+
+  function renderDropdown(query) {
+    if (!ddEl) return;
+    const q = (query||'').trim().toLowerCase();
+    const includeAll = showAllEl && showAllEl.checked;
+    const pool = (appData.tasks||[]).filter(t => {
+      if (String(t.ID).trim() === String(excludeId).trim()) return false; // no self-dependency
+      if (selected.includes(String(t.ID).trim())) return false;
+      if (!includeAll && ['Done','Cancelled'].includes(t.Status)) return false;
+      if (!q) return true;
+      return String(t.ID).toLowerCase().includes(q) || String(t['Task Description']||'').toLowerCase().includes(q);
+    }).slice(0, 30);
+    if (!pool.length) {
+      ddEl.innerHTML = '<div class="taskdeps-empty">No matching '+(includeAll?'':'active ')+'tasks</div>';
+    } else {
+      ddEl.innerHTML = pool.map(t =>
+        '<div class="taskdeps-opt" data-id="'+escAttr(t.ID)+'">'
+        + '<span class="tdo-id">'+escAttr(t.ID)+'</span>'
+        + '<span class="tdo-desc">'+escAttr(t['Task Description']||'')+'</span>'
+        + '</div>'
+      ).join('');
+      ddEl.querySelectorAll('.taskdeps-opt').forEach(opt => opt.addEventListener('click', () => {
+        const id = opt.getAttribute('data-id');
+        if (!selected.includes(id)) selected.push(id);
+        hidden.value = selected.join(', ');
+        searchEl.value = '';
+        renderPills();
+        renderDropdown('');
+        ddEl.classList.remove('open');
+      }));
+    }
+  }
+
+  // Exposed so applyDraft() can re-sync pills after restoring a draft,
+  // since that path sets hidden.value directly rather than going through
+  // the picker's own add/remove handlers.
+  wrap.refreshTaskDeps = function() {
+    selected = hidden.value.split(',').map(s=>s.trim()).filter(Boolean);
+    renderPills();
+    if (searchEl) renderDropdown(searchEl.value);
+  };
+
+  renderPills();
+  if (!searchEl) return; // locked/read-only — pills only, no picker
+
+  searchEl.addEventListener('focus', () => { renderDropdown(searchEl.value); ddEl.classList.add('open'); });
+  searchEl.addEventListener('input', () => { renderDropdown(searchEl.value); ddEl.classList.add('open'); });
+  showAllEl && showAllEl.addEventListener('change', () => renderDropdown(searchEl.value));
+  document.addEventListener('click', e => { if (!wrap.contains(e.target)) ddEl.classList.remove('open'); });
+}
 
 // ── PWA install prompt ────────────────────────────────────────
 let _deferredInstallPrompt = null;
