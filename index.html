@@ -34,7 +34,30 @@
     .shell { display: flex; height: 100vh; }
 
     /* SIDEBAR */
-    #sidebar { width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; transition: transform 0.25s; z-index: 50; }
+    #sidebar { width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.2s, transform 0.25s; z-index: 50; }
+    #sidebar-collapse-btn { display: none; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); cursor: pointer; flex-shrink: 0; transition: all 0.15s; }
+    #sidebar-collapse-btn:hover { color: var(--text); background: var(--surface3); }
+    #sidebar-collapse-btn svg { width: 12px; height: 12px; transition: transform 0.2s; }
+    @media (min-width: 701px) {
+      #sidebar-collapse-btn { display: flex; }
+      #sidebar.collapsed { width: 60px; }
+      /* Text hidden via font-size:0 rather than display:none — icons are
+         sized in px (see .nav-item svg) so they're unaffected, and this
+         avoids needing to wrap every nav-item's label in its own span. */
+      #sidebar.collapsed .nav-section,
+      #sidebar.collapsed .sidebar-logo p,
+      #sidebar.collapsed .sidebar-logo .version-pill,
+      #sidebar.collapsed .lb-role,
+      #sidebar.collapsed .lb-logout,
+      #sidebar.collapsed .sidebar-footer p { display: none; }
+      #sidebar.collapsed .sidebar-logo .wordmark { font-size: 0; }
+      #sidebar.collapsed .sidebar-logo .wordmark::after { content: 'N'; font-size: 20px; font-weight: 800; color: var(--accent2); }
+      #sidebar.collapsed .nav-item { font-size: 0; justify-content: center; gap: 0; padding: 8px; }
+      #sidebar.collapsed .nav-item .badge { display: none; }
+      #sidebar.collapsed .lb-name { font-size: 0; text-align: center; }
+      #sidebar.collapsed .lb-name::after { content: '👤'; font-size: 14px; }
+      #sidebar.collapsed #sidebar-collapse-btn svg { transform: rotate(180deg); }
+    }
     .sidebar-logo { padding: 18px 18px 14px; border-bottom: 1px solid var(--border); }
     .sidebar-logo .wordmark { font-size: 20px; font-weight: 800; letter-spacing: 5px; color: var(--text); }
     .sidebar-logo .wordmark span { color: var(--accent2); }
@@ -89,14 +112,23 @@
     body.is-member #btn-mytasks-panel { display: inline-flex; }
     body.is-leader #btn-sync { display: inline-flex; }
     body:not(.is-leader):not(.can-add-new) #add-btn { display: none !important; }
-    /* Pull-to-refresh indicator */
-    #ptr-indicator { position: fixed; top: var(--topbar-h); left: 50%; transform: translateX(-50%) translateY(-110%); background: var(--accent); color: #fff; font-size: 10px; font-family: 'Space Mono', monospace; padding: 5px 16px; border-radius: 0 0 16px 16px; z-index: 200; white-space: nowrap; pointer-events: none; transition: transform 0.2s ease; }
-    #ptr-indicator.visible { transform: translateX(-50%) translateY(0); }
-    @media (min-width: 701px) { #ptr-indicator { display: none; } }
     /* SVG icon sizing inside action buttons */
     .top-btn svg { width: 13px; height: 13px; display: inline-block; vertical-align: -2px; margin-right: 3px; }
 
-    #content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 20px 80px; position: relative; }
+    #content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 20px 80px; position: relative; overscroll-behavior-y: contain; }
+    /* Custom pull-to-sync — replaces the browser's native pull-to-refresh
+       (which would otherwise do a full page reload and lose app state).
+       Hidden by default (height:0), only appears while actively pulling. */
+    #pull-sync-indicator {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      height: 0; overflow: hidden; opacity: 0;
+      font-size: 11px; font-family: 'Space Mono', monospace; color: var(--muted);
+      transition: height 0.15s ease, opacity 0.15s ease;
+    }
+    #pull-sync-indicator.pulling, #pull-sync-indicator.syncing { opacity: 1; }
+    #pull-sync-indicator svg { width: 14px; height: 14px; transition: transform 0.1s; }
+    #pull-sync-indicator.syncing svg { animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .view { display: none; animation: fadeIn 0.3s ease; }
     .view.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -406,6 +438,7 @@
     .cal-event span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .cal-more { font-size: 9px; font-family: 'Space Mono', monospace; color: var(--accent); margin-top: 2px; }
     .cal-popover { position: fixed; z-index: 90; background: var(--surface); border: 1px solid rgba(108,99,255,0.3); border-radius: 12px; padding: 16px; min-width: 240px; max-width: 320px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+    #cal-pop-events { max-height: 260px; overflow-y: auto; }
     .cal-popover-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 12px; font-family: 'Space Mono', monospace; font-weight: 700; color: var(--text); }
     .cal-pop-event { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
     .cal-pop-event:last-child { border-bottom: none; padding-bottom: 0; }
@@ -799,10 +832,15 @@
 
 <div class="shell">
   <aside id="sidebar">
-    <div class="sidebar-logo">
-      <div class="wordmark">NEX<span>US</span></div>
-      <p>OPS CONSOLE</p>
-      <span class="version-pill">RESCUETAP</span>
+    <div class="sidebar-logo" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <div>
+        <div class="wordmark">NEX<span>US</span></div>
+        <p>OPS CONSOLE</p>
+        <span class="version-pill">RESCUETAP</span>
+      </div>
+      <button id="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Collapse sidebar" type="button">
+        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 20 20"><path d="M12 4l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
     </div>
     <nav>
       <div class="nav-section">Overview</div>
@@ -918,9 +956,12 @@
   <!--  <button class="top-btn" id="btn-download-html" onclick="downloadNexusHTML()" title="Download NEXUS" style="background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.25);color:var(--accent2)">⬇ Save</button>-->  
       <button class="top-btn btn-add" id="add-btn" onclick="openDrawer()">+ NEW</button>
     </header>
-    <div id="ptr-indicator">↻ Pull to sync</div>
 
     <div id="content" class="pb-10">
+      <div id="pull-sync-indicator">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
+        <span id="pull-sync-text">Pull to sync</span>
+      </div>
 
       <!-- DASHBOARD -->
       <div id="view-dashboard" class="view active">
@@ -1172,11 +1213,12 @@
               <span id="cal-month-label" style="font-size:14px;font-weight:700;font-family:'Space Mono',monospace"></span>
               <button class="cal-nav" onclick="calShift(1)">&#8250;</button>
             </div>
-            <div class="cal-legend">
-              <span class="cal-dot" style="background:#f05060"></span>Task Deadline
-              <span class="cal-dot" style="background:#2d8cff;margin-left:12px"></span>Zoom
-              <span class="cal-dot" style="background:#00c367;margin-left:12px"></span>Google Meet
-              <span class="cal-dot" style="background:#f0a030;margin-left:12px"></span>Physical
+            <div class="cal-legend" id="cal-filter">
+              <span style="color:var(--text);font-weight:700">Show on calendar:</span>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" data-caltype="start" checked onchange="calFilterChanged()"><span class="cal-dot" style="background:#f0d030"></span>Task Start Dates</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:10px"><input type="checkbox" data-caltype="deadline" checked onchange="calFilterChanged()"><span class="cal-dot" style="background:#f05060"></span>Task Deadlines</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:10px"><input type="checkbox" data-caltype="meeting" checked onchange="calFilterChanged()"><span class="cal-dot" style="background:#2d8cff"></span>Meetings</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:10px"><input type="checkbox" data-caltype="partner" checked onchange="calFilterChanged()"><span class="cal-dot" style="background:#a060f0"></span>Partner Follow-Ups</label>
             </div>
             <div class="cal-grid-head"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
             <div id="cal-grid" class="cal-grid"></div>
@@ -1197,20 +1239,11 @@
         <div id="team-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
       </div>
 
-      <!-- REVIEW QUEUE (Fireflies meeting action items + manual AI extraction) -->
+      <!-- REVIEW QUEUE (Fireflies meeting action items) -->
       <div id="view-review" class="view">
         <div class="card-head" style="padding:0 0 16px">
           <h3>Review Queue</h3>
           <span class="sub">Action items extracted from meetings — nothing here reaches Master Tasks until you approve it.</span>
-        </div>
-        <div class="card" style="padding:14px;margin-bottom:16px">
-          <div style="font-weight:700;font-size:13px;margin-bottom:8px">🤖 Extract tasks from meeting notes</div>
-          <div class="sub" style="margin-bottom:8px">Paste raw notes or a transcript — no Fireflies or n8n needed. AI pulls out action items and drops them below for you to review.</div>
-          <textarea class="form-input" id="ai-extract-text" rows="5" style="width:100%;margin-bottom:8px" placeholder="Paste meeting notes or transcript here..."></textarea>
-          <div style="display:flex;gap:8px;align-items:center">
-            <button class="btn-primary" id="ai-extract-btn" onclick="submitAIExtract()">Extract Tasks</button>
-            <span id="ai-extract-status" class="sub"></span>
-          </div>
         </div>
         <div id="review-list" style="display:flex;flex-direction:column;gap:10px"></div>
       </div>
@@ -1514,9 +1547,19 @@ const ADD_BTN_LABELS = {
 // ============================================================
 //  INIT
 // ============================================================
+// Desktop-only sidebar collapse — persisted so it survives reloads.
+// Purely CSS-driven (see #sidebar.collapsed rules); this just flips the
+// class and remembers the choice.
+function toggleSidebarCollapse() {
+  const collapsed = document.getElementById('sidebar').classList.toggle('collapsed');
+  try { localStorage.setItem('nexus_sidebar_collapsed', collapsed ? '1' : '0'); } catch(e) {}
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   updateTime();
   setInterval(updateTime, 30000);
+
+  try { if (localStorage.getItem('nexus_sidebar_collapsed') === '1') document.getElementById('sidebar').classList.add('collapsed'); } catch(e) {}
 
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', e => { e.preventDefault(); loadView(item.dataset.view); });
@@ -1741,6 +1784,87 @@ async function syncData() {
   // Only show success toast if data actually loaded
   if (appData && appData.tasks) showToast('Synced!','success');
 }
+
+// ============================================================
+//  PULL-TO-SYNC (custom, touch only)
+// ============================================================
+// Replaces the browser's native pull-to-refresh — that gesture would
+// otherwise trigger a full page reload and lose all in-memory app state.
+// Hidden by default (0 height, no bar sitting there statically); only
+// appears while actively pulling down from the very top of the content
+// area, and only performs an in-app sync (syncData()), never a page reload.
+document.addEventListener('DOMContentLoaded', () => {
+  const content   = document.getElementById('content');
+  const indicator = document.getElementById('pull-sync-indicator');
+  const label     = document.getElementById('pull-sync-text');
+  if (!content || !indicator || !label) return;
+
+  const THRESHOLD = 70; // px of pull before release triggers a sync
+  const MAX = 100;
+  let startY = null, pulling = false, syncing = false;
+
+  // Shared gesture logic — driven by touch on mobile, and by mouse on
+  // desktop (mouse support exists purely so the gesture can be tested
+  // locally in a browser, without deploying to a phone every time).
+  function onStart(y) {
+    if (syncing) { startY = null; return; }
+    startY = content.scrollTop === 0 ? y : null;
+  }
+
+  function onMove(y) {
+    if (startY === null || syncing) return;
+    const dy = y - startY;
+    if (dy <= 0) { pulling = false; indicator.classList.remove('pulling'); indicator.style.height = '0px'; return; }
+    pulling = true;
+    const dist = Math.min(dy * 0.5, MAX); // damped pull, harder to over-pull
+    indicator.classList.add('pulling');
+    indicator.style.height = dist + 'px';
+    label.textContent = dist >= THRESHOLD ? 'Release to sync' : 'Pull to sync';
+  }
+
+  function onEnd() {
+    if (!pulling || syncing) { startY = null; pulling = false; return; }
+    const dist = parseInt(indicator.style.height) || 0;
+    pulling = false; startY = null;
+    if (dist >= THRESHOLD) {
+      syncing = true;
+      indicator.classList.remove('pulling'); indicator.classList.add('syncing');
+      indicator.style.height = '44px';
+      label.textContent = 'Syncing…';
+      syncData().finally(() => {
+        syncing = false;
+        indicator.classList.remove('syncing');
+        indicator.style.height = '0px';
+        label.textContent = 'Pull to sync';
+      });
+    } else {
+      indicator.classList.remove('pulling');
+      indicator.style.height = '0px';
+    }
+  }
+
+  content.addEventListener('touchstart', e => onStart(e.touches[0].clientY), { passive: true });
+  content.addEventListener('touchmove',  e => onMove(e.touches[0].clientY),  { passive: true });
+  content.addEventListener('touchend',   onEnd);
+
+  // Desktop testing only: click-drag down from the top of #content acts
+  // like a touch pull. Only activates once a drag actually starts, so it
+  // never interferes with normal clicks/scrolling.
+  let mouseDown = false;
+  content.addEventListener('mousedown', e => {
+    mouseDown = true;
+    onStart(e.clientY);
+  });
+  window.addEventListener('mousemove', e => {
+    if (!mouseDown) return;
+    onMove(e.clientY);
+  });
+  window.addEventListener('mouseup', () => {
+    if (!mouseDown) return;
+    mouseDown = false;
+    onEnd();
+  });
+});
 
 // ============================================================
 //  RENDER DISPATCHER
@@ -2237,42 +2361,6 @@ async function loadReviewQueue() {
     renderReviewQueue(r.items || []);
   } catch(e) {
     listEl.innerHTML = '<div class="sub">Failed to load — '+e.message+'</div>';
-  }
-}
-
-// Wired to the "Extract Tasks" button in the AI-extract card above the
-// review list. Manual trigger only, on purpose — no auto-run on paste, no
-// polling. Leader-only server-side (extractMeetingTasksAI checks the
-// token itself); this just handles the request/response and refreshes the
-// queue underneath it so the new items are visible immediately.
-async function submitAIExtract() {
-  const textEl = document.getElementById('ai-extract-text');
-  const statusEl = document.getElementById('ai-extract-status');
-  const btn = document.getElementById('ai-extract-btn');
-  const text = (textEl.value || '').trim();
-  if (!text) { showToast('Paste some meeting notes first', 'error'); return; }
-  btn.disabled = true;
-  statusEl.textContent = 'Extracting… (can take a few seconds)';
-  try {
-    const res = await fetch(SCRIPT_URL, { method:'POST', redirect:'follow', body: JSON.stringify({
-      action:'extractMeetingTasksAI', transcript:text, token:getIdentityToken()||''
-    })});
-    const r = await res.json();
-    if (r.error) { statusEl.textContent = ''; showToast(r.error, 'error'); return; }
-    if (!r.created) {
-      statusEl.textContent = '';
-      showToast(r.message || 'No action items found in that text', 'success');
-      return;
-    }
-    textEl.value = '';
-    statusEl.textContent = '';
-    showToast(r.created + ' task' + (r.created===1?'':'s') + ' extracted — review below', 'success');
-    loadReviewQueue();
-  } catch(e) {
-    statusEl.textContent = '';
-    showToast('Network error: ' + e.message, 'error');
-  } finally {
-    btn.disabled = false;
   }
 }
 function renderReviewQueue(items) {
@@ -3842,14 +3930,41 @@ function calISODate(y, m, d) {
   return y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
 }
 
+// Calendar filter — which event categories render on the grid, persisted
+// across reloads. Checkboxes live in the #cal-filter row above the grid.
+function getCalFilterState() {
+  const state = { start:true, deadline:true, meeting:true, partner:true };
+  try { Object.assign(state, JSON.parse(localStorage.getItem('nexus_cal_filter')||'{}')); } catch(e) {}
+  return state;
+}
+function calFilterChanged() {
+  const state = {};
+  document.querySelectorAll('#cal-filter input[data-caltype]').forEach(cb => state[cb.dataset.caltype] = cb.checked);
+  try { localStorage.setItem('nexus_cal_filter', JSON.stringify(state)); } catch(e) {}
+  renderCalendar();
+}
 function buildCalEvents() {
   // Returns a map: 'YYYY-MM-DD' -> [{type, color, title, meta, taskId?, meetingId?}]
   // taskId/meetingId power the "click event to open task/meeting" UX in the popover.
+  const filter = getCalFilterState();
   const evMap = {};
   const add = (iso, ev) => { if (!evMap[iso]) evMap[iso] = []; evMap[iso].push(ev); };
 
+  // Task start dates — separate from deadlines, was never plotted before
+  if (filter.start) (appData.tasks || []).forEach(t => {
+    if (!t['Start Date']) return;
+    const iso = String(t['Start Date']).slice(0,10);
+    add(iso, {
+      type  : 'start',
+      color : '#f0d030',
+      title : (t['Task Description'] || t.ID || 'Task') + ' — starts',
+      meta  : (t['Assigned To'] || '') + (t.Priority ? ' · ' + t.Priority : ''),
+      taskId: t.ID,
+    });
+  });
+
   // Task deadlines — include taskId so popover can editRow() directly
-  (appData.tasks || []).forEach(t => {
+  if (filter.deadline) (appData.tasks || []).forEach(t => {
     if (!t.Deadline) return;
     const iso = String(t.Deadline).slice(0,10);
     const isOverdue = new Date(iso) < new Date(new Date().toDateString());
@@ -3863,7 +3978,7 @@ function buildCalEvents() {
   });
 
   // Meetings — include meetingId so popover can navigate to meetings view
-  (appData.meetings || []).forEach(m => {
+  if (filter.meeting) (appData.meetings || []).forEach(m => {
     if (!m.Date) return;
     const iso = String(m.Date).slice(0,10);
     const locType = (m.Location_Type || m.Type || m['Meeting Type'] || '').toLowerCase();
@@ -3877,10 +3992,25 @@ function buildCalEvents() {
     });
   });
 
+  // Partnership follow-ups
+  if (filter.partner) (appData.partners || []).forEach(p => {
+    if (!p['Follow-Up Date']) return;
+    const iso = String(p['Follow-Up Date']).slice(0,10);
+    add(iso, {
+      type : 'partner',
+      color: '#a060f0',
+      title: (p.Organisation || 'Partner') + ' — follow-up due',
+      meta : p['Current Status'] || '',
+    });
+  });
+
   return evMap;
 }
 
 function renderCalendar() {
+  const filterState = getCalFilterState();
+  document.querySelectorAll('#cal-filter input[data-caltype]').forEach(cb => { cb.checked = filterState[cb.dataset.caltype] !== false; });
+
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('cal-month-label').textContent = monthNames[calMonth] + ' ' + calYear;
 
@@ -4239,39 +4369,6 @@ function resetCols(tableId) {
 document.addEventListener('click', e => {
   if (_colPickerOpen && !e.target.closest('#col-picker-panel') && !e.target.closest('[data-col-picker-active]')) closeColPicker();
 }, true);
-
-// ── Pull-to-refresh (mobile Sync replacement) ─────────────────
-(function() {
-  const PTR_THRESHOLD = 65; // px drag needed to trigger
-  let _ptrStartY = 0, _ptrActive = false, _ptrTriggered = false;
-  const indicator = () => document.getElementById('ptr-indicator');
-  const content   = () => document.getElementById('content');
-
-  document.addEventListener('touchstart', e => {
-    const c = content();
-    if (!c || c.scrollTop > 0) return; // only from true top
-    _ptrStartY   = e.touches[0].clientY;
-    _ptrActive   = true;
-    _ptrTriggered = false;
-  }, { passive: true });
-
-  document.addEventListener('touchmove', e => {
-    if (!_ptrActive) return;
-    const dy = e.touches[0].clientY - _ptrStartY;
-    if (dy <= 0) { _ptrActive = false; return; }
-    const ind = indicator();
-    if (ind) ind.classList.toggle('visible', dy >= PTR_THRESHOLD);
-    _ptrTriggered = dy >= PTR_THRESHOLD;
-  }, { passive: true });
-
-  document.addEventListener('touchend', () => {
-    if (!_ptrActive) return;
-    _ptrActive = false;
-    const ind = indicator();
-    if (ind) ind.classList.remove('visible');
-    if (_ptrTriggered) { _ptrTriggered = false; syncData(); }
-  });
-})();
 
 // ── Apply saved theme on load ─────────────────────────────────
 (function(){
