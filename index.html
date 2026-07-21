@@ -20,7 +20,7 @@
       --border: rgba(255,255,255,0.06); --border2: rgba(255,255,255,0.1);
       --accent: #5b52f0; --accent2: #00d4a0; --accent3: #f0a030;
       --danger: #f05060; --warn: #f0c040; --info: #4090f0;
-      --text: #e2e2ee; --muted: #5a5a7a; --sidebar-w: 244px; --topbar-h: 54px;
+      --text: #f5f5fb; --muted: #5a5a7a; --sidebar-w: 244px; --topbar-h: 54px;
     }
     [data-theme="light"] {
       --bg: #f0f0f8; --surface: #ffffff; --surface2: #e8e8f4; --surface3: #ddddf0;
@@ -295,6 +295,26 @@
     /* FILTER BAR */
     .filter-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
     .filter-bar label { font-size: 9px; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .filter-extra { display: contents; }
+    @media (max-width: 700px) {
+      .filter-bar { align-items: flex-start; }
+      .filter-bar > label:first-child { display: none; }
+      #task-search { flex: 1 1 auto; max-width: none !important; }
+      #task-filters-toggle { display: inline-flex !important; }
+      .filter-extra { display: none; }
+      .filter-extra.expanded {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        column-gap: 12px; row-gap: 10px;
+        width: 100%;
+        margin-top: 10px; padding-top: 12px;
+        border-top: 1px solid var(--border);
+        align-items: center;
+      }
+      .filter-extra.expanded > label { grid-column: 1; white-space: nowrap; }
+      .filter-extra.expanded > select, .filter-extra.expanded > input { grid-column: 2; width: 100%; max-width: none !important; }
+      .filter-extra.expanded > .filter-clear, .filter-extra.expanded > .filter-count { grid-column: 1 / -1; }
+    }
     /* Column-visibility picker */
     .col-picker { position:fixed; z-index:300; background:var(--surface); border:1px solid var(--border2); border-radius:10px; padding:12px 14px; min-width:170px; box-shadow:0 8px 28px rgba(0,0,0,0.35); }
     .col-picker-title { font-size:9px; font-family:'Space Mono',monospace; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px; margin-bottom:8px; }
@@ -348,6 +368,12 @@
     /* CHAT */
     .chat-msg { max-width: 82%; padding: 8px 11px; border-radius: 12px; font-size: 12.5px; line-height: 1.4; background: rgba(255,255,255,0.05); border: 1px solid var(--border); align-self: flex-start; }
     .chat-msg.mine { align-self: flex-end; background: rgba(91,82,240,0.16); border-color: rgba(91,82,240,0.3); }
+    .chat-msg-system { align-self: center; max-width: 92%; background: rgba(0,212,160,0.06); border-color: rgba(0,212,160,0.22); }
+    .chat-msg-system .cm-author { color: var(--accent2); }
+    .chat-task-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .chat-action-btn { font-size: 11px; font-family: 'Space Mono', monospace; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--accent2); background: rgba(0,212,160,0.12); color: var(--accent2); cursor: pointer; transition: opacity 0.15s; }
+    .chat-action-btn:hover:not(:disabled) { background: rgba(0,212,160,0.22); }
+    .chat-action-btn:disabled { opacity: 0.55; cursor: default; border-color: var(--border); background: var(--surface2); color: var(--muted); }
     .chat-msg .cm-author { font-size: 10px; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
     .chat-msg.mine .cm-author { color: #8880ff; }
     .chat-msg .cm-time { font-size: 9px; font-family: 'Space Mono', monospace; color: var(--muted); margin-top: 3px; }
@@ -938,16 +964,16 @@
         <span class="badge" id="nav-badge-review">0</span>
       </a>
     </nav>
-    <div id="leader-badge">
-      <div class="lb-name" id="lb-name-text" onclick="openProfileModal()" style="cursor:pointer">Leader</div>
+    <div id="leader-badge" onclick="openProfileModal()" style="cursor:pointer">
+      <div class="lb-name" id="lb-name-text">Leader</div>
       <div class="lb-role">Session Active</div>
-      <span class="lb-logout" onclick="openChangePasswordModal()" style="color:var(--accent);margin-right:10px">Change password</span>
-      <span class="lb-logout" onclick="logoutLeader()">Sign out x</span>
+      <span class="lb-logout" onclick="event.stopPropagation();openChangePasswordModal()" style="color:var(--accent);margin-right:10px">Change password</span>
+      <span class="lb-logout" onclick="event.stopPropagation();logoutLeader()">Sign out x</span>
     </div>
-    <div id="member-badge">
-      <div class="lb-name" id="mb-name-text" onclick="openProfileModal()" style="cursor:pointer">Team Member</div>
+    <div id="member-badge" onclick="openProfileModal()" style="cursor:pointer">
+      <div class="lb-name" id="mb-name-text">Team Member</div>
       <div class="lb-role">Logged In</div>
-      <span class="lb-logout" onclick="logoutLeader()">Sign out x</span>
+      <span class="lb-logout" onclick="event.stopPropagation();logoutLeader()">Sign out x</span>
     </div>
     <!-- Mobile-only utility strip in sidebar -->
     <div id="sidebar-utils">
@@ -1039,6 +1065,10 @@
         <div class="filter-bar">
           <label>Search</label>
           <input id="task-search" class="filter-input" type="text" placeholder="Search task, ID, assignee…" style="max-width:170px" oninput="renderTasks()">
+          <button class="filter-clear" id="task-filters-toggle" onclick="toggleTaskFiltersExtra()" style="display:none;background:var(--bg);border:1px solid var(--border2);border-radius:5px;font-size:11px;padding:5px 10px;align-items:center;gap:4px">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:3px"><polygon points="4 4 20 4 14 12 14 19 10 21 10 12 4 4"/></svg>Filters<span id="task-filters-badge" style="display:none;background:var(--accent);color:#fff;border-radius:20px;font-size:9px;padding:1px 6px;margin-left:4px"></span>
+          </button>
+          <div id="task-filters-extra" class="filter-extra">
           <label>Status</label>
           <select id="task-filter-status" class="filter-input" onchange="renderTasks()">
             <option value="">All</option>
@@ -1079,6 +1109,7 @@
           </select>
           <button class="filter-clear" onclick="clearTaskFilters()">✕ Clear</button>
           <span class="filter-count" id="tasks-filter-count"></span>
+          </div>
         </div>
         <div class="card">
           <div class="card-head"><h3>Master Tasks</h3><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -2006,7 +2037,50 @@ function toggleTheme() {
   localStorage.setItem('nexus_theme', isLight?'dark':'light');
 }
 (function(){ const t=localStorage.getItem('nexus_theme')||'dark'; document.documentElement.setAttribute('data-theme',t); })();
+function toggleTaskFiltersExtra() {
+  const el = document.getElementById('task-filters-extra');
+  if (el) el.classList.toggle('expanded');
+}
+
 function toggleSidebar() { const s=document.getElementById('sidebar'); const o=document.getElementById('sidebar-overlay'); s.classList.toggle('open'); o.classList.toggle('open', s.classList.contains('open')); }
+
+// ── Sidebar swipe-to-close (mobile only) ───────────────────────
+// Desktop uses toggleSidebarCollapse() above instead — this is purely the
+// mobile drawer, and only ever engages while it's open.
+(function() {
+  const MOBILE_BREAKPOINT = 700;
+  const CLOSE_THRESHOLD    = 70;
+  let _sbStartX = 0, _sbDragging = false;
+  function isMobile() { return window.innerWidth <= MOBILE_BREAKPOINT; }
+  function sidebarEl() { return document.getElementById('sidebar'); }
+
+  document.addEventListener('touchstart', e => {
+    const sb = sidebarEl();
+    if (!sb || !isMobile() || !sb.classList.contains('open')) return;
+    if (!sb.contains(e.target)) return;
+    _sbStartX = e.touches[0].clientX;
+    _sbDragging = true;
+    sb.style.transition = 'none';
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!_sbDragging) return;
+    const dx = e.touches[0].clientX - _sbStartX;
+    if (dx >= 0) return;
+    sidebarEl().style.transform = `translateX(${dx}px)`;
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!_sbDragging) return;
+    _sbDragging = false;
+    const sb = sidebarEl();
+    if (!sb) return;
+    sb.style.transition = '';
+    sb.style.transform = '';
+    const dx = (e.changedTouches[0]?.clientX ?? _sbStartX) - _sbStartX;
+    if (dx <= -CLOSE_THRESHOLD) toggleSidebar();
+  });
+})();
 function showToast(msg,type='') { const t=document.getElementById('toast'); t.textContent=msg; t.className='show '+(type||''); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show','success','error'),3200); }
 
 // ============================================================
@@ -2075,6 +2149,9 @@ function renderTasks() {
   if(fSupport)  tasks=tasks.filter(t=>String(t['Support Person']??'').split(/[,\/&+]+/).map(n=>n.trim().toLowerCase()).includes(fSupport.trim().toLowerCase()));
   const fc=document.getElementById('tasks-filter-count');
   if(fc) fc.textContent=(fSearch||fStatus||fOwner||fPriority||fDept||fSupport)?tasks.length+' shown':'';
+  const activeCount=[fStatus,fPriority,fDept,fSupport].filter(Boolean).length;
+  const badge=document.getElementById('task-filters-badge');
+  if(badge){ badge.style.display=activeCount?'inline-block':'none'; badge.textContent=activeCount; }
   const sort=(document.getElementById('task-sort')||{}).value||'newest';
   const priOrd={URGENT:0,HIGH:1,MEDIUM:2,LOW:3};
   if(sort==='newest')       tasks.sort((a,b)=>(b.Last_Updated||b.ID||'').localeCompare(a.Last_Updated||a.ID||''));
@@ -2957,8 +3034,54 @@ function renderChatMessages(container, messages) {
   container.innerHTML = messages.map(m => {
     const mine = canonicalizeName(m.Author) === canonicalizeName(me);
     const time = new Date(m.Timestamp).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, day: 'numeric', month: 'short' });
-    return '<div class="chat-msg' + (mine ? ' mine' : '') + '"><div class="cm-author">' + escHtml(canonicalizeName(m.Author)) + '</div><div>' + renderMessageBody(m.Message) + '</div><div class="cm-time">' + time + '</div></div>';
+    const actionsHtml = m.MsgType === 'task_assigned' ? renderTaskAssignedActions(m.TaskID) : '';
+    return '<div class="chat-msg' + (mine ? ' mine' : '') + (m.MsgType ? ' chat-msg-system' : '') + '"><div class="cm-author">' + escHtml(canonicalizeName(m.Author)) + '</div><div>' + renderMessageBody(m.Message) + '</div>' + actionsHtml + '<div class="cm-time">' + time + '</div></div>';
   }).join('');
+}
+
+// Acknowledge / In Progress buttons shown on a "Task Assigned" chat
+// message — lets the assignee action it right from the chat instead of
+// having to find the Status dropdown separately. Button state reflects the
+// task's actual current Status (the source of truth), not just whether
+// this particular button has been clicked before, so it stays correct
+// across reloads and even if the status was changed some other way.
+function renderTaskAssignedActions(taskId) {
+  const task = (appData.tasks || []).find(t => t.ID === taskId);
+  const status = task ? String(task.Status || '') : '';
+  const acked   = status && status !== 'Not Started';
+  const started = status === 'In Progress' || ['Revisions Needed','In Review','Done'].includes(status);
+  return '<div class="chat-task-actions">' +
+    '<button class="chat-action-btn' + (acked ? ' done' : '') + '" ' + (acked ? 'disabled' : '') + ' onclick="chatAckTaskUI(\'' + escQ(taskId) + '\',this)">' + (acked ? '✓ Acknowledged' : 'Acknowledge') + '</button>' +
+    '<button class="chat-action-btn' + (started ? ' done' : '') + '" ' + (started ? 'disabled' : '') + ' onclick="chatStartTaskUI(\'' + escQ(taskId) + '\',this)">' + (started ? '✓ In Progress' : '▶ In Progress') + '</button>' +
+    '</div>';
+}
+
+async function chatAckTaskUI(taskId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const res = await fetch(SCRIPT_URL, { method:'POST', redirect:'follow', body: JSON.stringify({ action:'chatAckTask', taskId, token: getIdentityToken()||'' }) });
+    const r = await res.json();
+    if (r.error) { showToast(r.error, 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Acknowledge'; } return; }
+    await loadData();
+    if (chatActiveTaskId) loadActiveTaskThread(true, false); else loadTeamChat(true, false);
+  } catch (e) {
+    showToast('Failed to acknowledge', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Acknowledge'; }
+  }
+}
+
+async function chatStartTaskUI(taskId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const res = await fetch(SCRIPT_URL, { method:'POST', redirect:'follow', body: JSON.stringify({ action:'chatStartTask', taskId, token: getIdentityToken()||'' }) });
+    const r = await res.json();
+    if (r.error) { showToast(r.error, 'error'); if (btn) { btn.disabled = false; btn.textContent = '▶ In Progress'; } return; }
+    await loadData();
+    if (chatActiveTaskId) loadActiveTaskThread(true, false); else loadTeamChat(true, false);
+  } catch (e) {
+    showToast('Failed to start task', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '▶ In Progress'; }
+  }
 }
 function scrollChatToBottom(id) { const el = document.getElementById(id); if (el) el.scrollTop = el.scrollHeight; }
 
