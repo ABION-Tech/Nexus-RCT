@@ -237,9 +237,10 @@
     .dep-chip.done { background: rgba(0,212,160,0.1); color: var(--accent2); border: 1px solid rgba(0,212,160,0.2); }
     .dep-chip.pending { background: rgba(240,80,96,0.1); color: #f08090; border: 1px solid rgba(240,80,96,0.2); }
     .dep-chip.unknown { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
+    .dep-chip.person { background: rgba(91,82,240,0.1); color: var(--accent); border: 1px solid rgba(91,82,240,0.25); }
     /* Depends-On task picker — dropdown of existing tasks, defaults to
        active (non-Done/Cancelled) tasks with a toggle to widen the search. */
-    .taskdeps-wrap { position: relative; }
+    .taskdeps-wrap, .teammulti-wrap { position: relative; }
     .taskdeps-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
     .taskdeps-pills:empty { display: none; }
     .taskdeps-pills .dep-chip { margin-right: 0; cursor: default; display: inline-flex; align-items: center; gap: 4px; }
@@ -1280,6 +1281,7 @@
               <label style="display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:10px"><input type="checkbox" data-caltype="deadline" checked onchange="calFilterChanged()"><span class="cal-dot" style="background:#f05060"></span>Task Deadlines</label>
               <label style="display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:10px"><input type="checkbox" data-caltype="meeting" checked onchange="calFilterChanged()"><span class="cal-dot" style="background:#2d8cff"></span>Meetings</label>
               <label style="display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:10px"><input type="checkbox" data-caltype="partner" checked onchange="calFilterChanged()"><span class="cal-dot" style="background:#a060f0"></span>Partner Follow-Ups</label>
+              <span id="cal-person-filter" style="display:inline-flex;align-items:center"></span>
             </div>
             <div class="cal-grid-head"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
             <div id="cal-grid" class="cal-grid"></div>
@@ -1396,7 +1398,7 @@ function getExpectedTodayMembers() {
 // a live dropdown of team names (getTeamNames()) instead of free text — the
 // single reusable "pick a person" control. Add a key here and set
 // type:'select' on that field in FORM_SCHEMAS to opt a new field in.
-const TEAM_SELECT_FIELDS = ['Assigned To','Support Person','Team Member','Contact Owner'];
+const TEAM_SELECT_FIELDS = ['Supervisor','Assigned To','Support Person','Team Member','Contact Owner'];
 
 // ============================================================
 //  FORM SCHEMAS
@@ -1408,10 +1410,12 @@ const FORM_SCHEMAS = {
       {key:'ID',label:'Task ID',type:'text',placeholder:'e.g. T-001',required:true},
       {key:'Task Description',label:'Task Description',type:'text',placeholder:'What needs to be done?',required:true},
       {section:'Assignment'},
-      {key:'Assigned To',label:'Assigned To',type:'select',options:['','Ayo T. Joshua','Shina Samson','Israel Idowu','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)','Daniel Bowman'],required:true,leaderOnly:true},
-      {key:'Assigned_To_Email',label:'Assignee Email',type:'email',placeholder:'name@rescuetap.org',leaderOnly:true},
-      {key:'Support Person',label:'Support Person',type:'select',options:['','Ayo T. Joshua','Shina Samson','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)','Daniel Bowman'],leaderOnly:true},
-      {key:'Support_Person_Email',label:'CC Email (Support Person)',type:'email',placeholder:'name@rescuetap.org',leaderOnly:true},
+      {key:'Supervisor',label:'Supervisor',type:'select',multi:true,options:['','Ayo T. Joshua','Shina Samson','Israel Idowu','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)','Daniel Bowman'],leaderOnly:true},
+      {key:'Supervisor_Email',label:'Supervisor Email',type:'email',placeholder:'name@rescuetap.org',leaderOnly:true},
+      {key:'Assigned To',label:'Assigned To',type:'select',multi:true,options:['','Ayo T. Joshua','Shina Samson','Israel Idowu','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)','Daniel Bowman'],required:true,leaderOnly:true},
+      {key:'Assigned_To_Email',label:'Assignee Email(s)',type:'email',placeholder:'name@rescuetap.org',leaderOnly:true},
+      {key:'Support Person',label:'Support Person',type:'select',multi:true,options:['','Ayo T. Joshua','Shina Samson','Darlington','Chizaram','Adetola','Titi','Naruka','Bukayo','Joshua (Content)','Seth','Nora','Rashidat','Muyi','Perpetual','Christiana','Mark','Nehemiah','Joshua Alex','Mr Sam','Joshua (Tech)','Daniel Bowman'],leaderOnly:true},
+      {key:'Support_Person_Email',label:'CC Email(s) (Support Person)',type:'email',placeholder:'name@rescuetap.org',leaderOnly:true},
       {key:'Business / Dept',label:'Department',type:'select',options:['','COS','Partnerships','Marketing','Product','Operations','Finance','HR'],leaderOnly:true},
       {section:'Priority & Timing'},
       {key:'Priority',label:'Priority',type:'select',options:['URGENT','HIGH','MEDIUM','LOW'],required:true,leaderOnly:true},
@@ -1422,8 +1426,8 @@ const FORM_SCHEMAS = {
       {key:'Depends On',label:'Depends On',type:'taskdeps',leaderOnly:true},
       {section:'Notes'},
       {key:'Notes',label:'Notes',type:'textarea',placeholder:'Additional context...'},
-      {key:'Proof Link',label:'Proof Link',type:'url',placeholder:'https://...'},
-      {key:'_drive_share',label:'Attach a Drive File',type:'drivelink'},
+      {key:'Proof Link',label:'Proof Link',type:'url',placeholder:'https://...',hideOnCreate:true},
+      {key:'_drive_share',label:'Attach a Drive File',type:'drivelink',hideOnCreate:true},
       {section:'Follow-Up'},
       {key:'Follow_Up_Hours',label:'Hourly Follow-Up Interval',type:'number',placeholder:'e.g. 1 or 2 (leave blank = off)',leaderOnly:true},
     ]
@@ -1579,6 +1583,10 @@ function populateTeamSelects() {
     names.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; myTasksSel.appendChild(o); });
     if (prev) myTasksSel.value = prev;
   }
+
+  // #16/#16a calendar person filter — roster names (and who counts as a
+  // "leader" for the picker) may have just changed, so rebuild it too.
+  renderCalPersonFilterUI();
 }
 
 let currentView = 'dashboard';
@@ -2166,7 +2174,7 @@ function renderTasks() {
     const isOver=t.Deadline&&!['Done','Cancelled'].includes(t.Status)&&new Date(t.Deadline)<new Date(new Date().toDateString());
     const dlStyle = isOver ? 'color:var(--danger);font-weight:700;cursor:pointer;text-decoration:underline dotted' : 'cursor:pointer;text-decoration:underline dotted;color:var(--muted)';
     const dlTitle = t.Deadline ? (isOver ? 'OVERDUE — click to edit' : 'Click to edit deadline') : '';
-    return '<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+sw+depChipsHtml(t)+blockedByMeChipsHtml(t)+checklistChipHtml(t)+'</td><td>'+priorityBadge(t.Priority)+'</td><td>'+t['Assigned To']+'</td><td>'+(t['Support Person']||'--')+'</td><td>'+(t['Business / Dept']||'--')+'</td><td style="font-family:Space Mono,monospace;font-size:11px;'+dlStyle+'" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" title="'+dlTitle+'">'+fmtDeadline(t,true)+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Edit</button></td></tr>';
+    return '<tr><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+sw+depChipsHtml(t)+blockedByMeChipsHtml(t)+checklistChipHtml(t)+'</td><td>'+priorityBadge(t.Priority)+'</td><td>'+t['Assigned To']+'</td><td>'+(t['Supervisor']||'--')+'</td><td>'+(t['Business / Dept']||'--')+'</td><td style="font-family:Space Mono,monospace;font-size:11px;'+dlStyle+'" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" title="'+dlTitle+'">'+fmtDeadline(t,true)+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td><button class="btn-sm" onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')">Edit</button></td></tr>';
   }).join('')||noDataRow(10,'No tasks');
 }
 
@@ -2593,6 +2601,15 @@ function renderTeam() {
       const on = String(row[p.col]||'').trim().toUpperCase()==='Y';
       return '<div class="toggle-wrap"><div style="font-size:10px;font-family:\'Space Mono\',monospace;color:var(--text)">'+p.label+'</div><label class="toggle"><input type="checkbox" '+(on?'checked':'')+' onchange="toggleTeamPermission(\''+escQ(name)+'\',\''+escQ(p.tab)+'\',this.checked,this)"><span class="slider"></span></label></div>';
     }).join('') + '</div>' : '';
+    // Pending = row added via Add Member but not yet confirmed (emailed link
+    // unclicked, possibly bounced) — see approveTeamMember/TEAM_INVITE_PROP
+    // server-side. A blank/missing Status is treated as Active (pre-migration
+    // rows), so only an explicit "Pending" shows this banner.
+    const isPending = String((row&&row['Status'])||'').trim().toLowerCase()==='pending';
+    const pendingHtml = isPending ? '<div style="margin-top:2px;padding:8px 10px;background:rgba(240,160,48,0.12);border:1px solid rgba(240,160,48,0.3);border-radius:7px;display:flex;align-items:center;justify-content:space-between;gap:8px">'
+      + '<span style="font-size:10px;font-family:\'Space Mono\',monospace;color:#f0a030">⏳ Invite pending</span>'
+      + '<button class="btn-sm" onclick="approveTeamMember(\''+escQ(name)+'\',this)">Approve</button>'
+      + '</div>' : '';
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;align-items:center;gap:10px">
         <div style="width:38px;height:38px;border-radius:50%;background:${color}22;border:2px solid ${color}55;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${color};font-family:'Space Mono',monospace;flex-shrink:0">${initials(name)}</div>
@@ -2604,9 +2621,29 @@ function renderTeam() {
       </div>
       <div style="font-size:10px;font-family:'Space Mono',monospace;padding:6px 8px;background:var(--surface2);border-radius:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="${email}">${email}</div>
       <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${info.dept}</div>
+      ${pendingHtml}
       ${permsHtml}
     </div>`;
   }).join('');
+}
+
+// Leader-only: flips a Pending roster row straight to Active (covers a
+// bounced/ignored invite email) — wires the Team Directory "Approve" button
+// to the server's approveTeamMember, mirroring toggleTeamPermission's
+// disable/call/refresh pattern above.
+async function approveTeamMember(name, el) {
+  if (el) { el.disabled = true; el.textContent = 'Approving…'; }
+  try {
+    const res = await fetch(SCRIPT_URL, { method:'POST', redirect:'follow', body: JSON.stringify({ action:'approveTeamMember', name, token: getIdentityToken()||'' }) });
+    const r = await res.json();
+    if (r.error) { showToast(r.error, 'error'); if (el) { el.disabled = false; el.textContent = 'Approve'; } return; }
+    showToast(name + ' approved — they can now sign in', 'success');
+    await loadData(); // refresh appData.team so Status reflects Active
+    renderTeam();
+  } catch (e) {
+    showToast('Network error approving team member', 'error');
+    if (el) { el.disabled = false; el.textContent = 'Approve'; }
+  }
 }
 
 // Grants or revokes `name`'s locked-field bypass for `tabName`. Leader-only
@@ -3570,6 +3607,7 @@ function updateLeaderUI() {
   if(reviewNav) reviewNav.style.display=leaderFlag?'flex':'none';
   const kpiNav=document.getElementById('nav-kpi-item');
   if(kpiNav) kpiNav.style.display=leaderFlag?'flex':'none';
+  renderCalPersonFilterUI();
   // If a non-leader is sitting on the Activity Log view when their session
   // ends (or never had access), bounce them out rather than leaving a now-
   // hidden nav item as the only way back to a visible view.
@@ -3617,12 +3655,12 @@ function applyDraft(draft) {
     const el = body.querySelector('.form-input[name="' + name.replace(/"/g, '\\"') + '"]');
     if (!el || el.disabled) return;
     el.value = draft.data[name];
-    if (el.tagName === 'SELECT' && el.name === 'Assigned To')    autoFillEmailField(el.value, 'Assigned_To_Email');
-    if (el.tagName === 'SELECT' && el.name === 'Support Person') autoFillEmailField(el.value, 'Support_Person_Email');
     const dpWrap = el.closest('.datepicker-wrap');
     if (dpWrap) { const disp = dpWrap.querySelector('.dp-val'); if (disp) disp.textContent = draft.data[name] || 'Select date'; }
     const tdWrap = el.closest('.taskdeps-wrap');
     if (tdWrap && tdWrap.refreshTaskDeps) tdWrap.refreshTaskDeps();
+    const tmWrap = el.closest('.teammulti-wrap');
+    if (tmWrap && tmWrap.refreshTeamMulti) tmWrap.refreshTeamMulti();
   });
 }
 
@@ -3683,29 +3721,50 @@ function generateForm() {
   if(showLockNote) body.innerHTML='<div class="lock-note">Some fields on this form are locked — leader login required to change them.</div>';
   schema.fields.forEach(field=>{
     if(field.section){body.innerHTML+='<div class="form-section-label">'+field.section+'</div>';return;}
+    if(field.hideOnCreate && !editingRowId){return;} // e.g. Proof Link / Drive attach — no proof to show before the task even exists
     const val=rowData?(rowData[field.key]!==undefined?rowData[field.key]:''):'';
     // Pre-populate email from map if this is the email field and val is blank
     const locked=field.leaderOnly&&!isLeader();
     const immutable = field.immutableOnEdit && !!editingRowId; // Start Date locked on edit for everyone
     let resolvedVal = val;
     if(field.key==='Assigned_To_Email') {
-      // Always resolve from map if blank — even when locked — so disabled field has the value in HTML
+      // Always resolve from map if blank — even when locked — so disabled field has the value in HTML.
+      // Resolves every name in "Assigned To" (now potentially multiple), not just the first.
       if(!resolvedVal) {
         const assignedTo = rowData ? (rowData['Assigned To']||'') : '';
-        resolvedVal = getTeamEmail(assignedTo);
+        resolvedVal = splitPeopleNamesFE(assignedTo).map(getTeamEmail).filter(Boolean).join(', ');
       }
     }
     if(field.key==='Support_Person_Email') {
       if(!resolvedVal) {
         const supportPerson = rowData ? (rowData['Support Person']||'') : '';
-        resolvedVal = getTeamEmail(supportPerson);
+        resolvedVal = splitPeopleNamesFE(supportPerson).map(getTeamEmail).filter(Boolean).join(', ');
+      }
+    }
+    if(field.key==='Supervisor_Email') {
+      // Resolves every name in "Supervisor" (now potentially multiple), same as Assigned To / Support Person.
+      if(!resolvedVal) {
+        const supervisorName = rowData ? (rowData['Supervisor']||'') : '';
+        resolvedVal = splitPeopleNamesFE(supervisorName).map(getTeamEmail).filter(Boolean).join(', ');
       }
     }
     const req=field.required?'<span style="color:var(--danger)">*</span>':'';
     let input='';
     const dis=(locked||immutable)?' disabled':'';
     const ro=field.readonly?' readonly style="opacity:0.5;cursor:not-allowed"':'';
-    if(field.type==='select'){
+    if(field.type==='select' && field.multi){
+      // Multi-person picker: pills + search dropdown, modeled on the existing
+      // Depends-On task picker. Hidden input holds the names joined the same
+      // way the read paths already split them (comma/slash/ampersand/plus).
+      const emailFieldName = field.key==='Assigned To' ? 'Assigned_To_Email' : field.key==='Support Person' ? 'Support_Person_Email' : field.key==='Supervisor' ? 'Supervisor_Email' : '';
+      const tmId='tm-'+escAttr(field.key).replace(/[\s/]/g,'_');
+      input='<div class="teammulti-wrap" id="'+tmId+'" data-email-field="'+escAttr(emailFieldName)+'">'
+        +'<div class="taskdeps-pills"></div>'
+        +(locked?'':'<input type="text" class="form-input taskdeps-search" placeholder="Search team members…" autocomplete="off">'
+          +'<div class="taskdeps-dropdown"></div>')
+        +'<input type="hidden" class="form-input" name="'+escAttr(field.key)+'" value="'+escAttr(resolvedVal)+'"'+(locked?' disabled':'')+'>'
+        +'</div>';
+    } else if(field.type==='select'){
       const isTeamField = TEAM_SELECT_FIELDS.includes(field.key);
       let optionList = field.options;
       if(isTeamField){
@@ -3714,7 +3773,8 @@ function generateForm() {
       }
       const opts=optionList.map(o=>'<option value="'+o+'" '+(o==resolvedVal?'selected':'')+'>'+(o||'')+'</option>').join('');
       const onChange = field.key==='Assigned To' ? ' onchange="handleTeamFieldChange(this,\'Assigned_To_Email\')"'
-        : field.key==='Support Person' ? ' onchange="handleTeamFieldChange(this,\'Support_Person_Email\')"' : '';
+        : field.key==='Support Person' ? ' onchange="handleTeamFieldChange(this,\'Support_Person_Email\')"'
+        : field.key==='Supervisor' ? ' onchange="handleTeamFieldChange(this,\'Supervisor_Email\')"' : '';
       input='<select class="form-input" name="'+escAttr(field.key)+'"'+dis+onChange+'>'+opts+'</select>';
     } else if(field.type==='textarea'){
       input='<textarea class="form-input" name="'+escAttr(field.key)+'" placeholder="'+(field.placeholder||'')+'"'+dis+ro+'>'+resolvedVal+'</textarea>';
@@ -3752,11 +3812,9 @@ function generateForm() {
   // Init all date pickers after DOM is updated
   body.querySelectorAll('.datepicker-wrap').forEach(w=>initDatePicker(w));
   body.querySelectorAll('.taskdeps-wrap').forEach(w=>initTaskDepsPicker(w));
-  // Auto-fill emails if Assigned To / Support Person already have a value (e.g. editing existing row)
-  const assignedToEl = body.querySelector('.form-input[name="Assigned To"]');
-  if(assignedToEl && assignedToEl.value) autoFillEmailField(assignedToEl.value, 'Assigned_To_Email');
-  const supportPersonEl = body.querySelector('.form-input[name="Support Person"]');
-  if(supportPersonEl && supportPersonEl.value) autoFillEmailField(supportPersonEl.value, 'Support_Person_Email');
+  body.querySelectorAll('.teammulti-wrap').forEach(w=>initTeamMultiPicker(w));
+  // Assigned To / Support Person are now multi-select team pickers —
+  // initTeamMultiPicker (above) handles their own initial email sync.
   // Per-task discussion thread + checklist — only for existing Master Tasks rows
   if (currentTab === '1. Master Tasks' && editingRowId) {
     body.insertAdjacentHTML('beforeend', checklistHTML(editingRowId));
@@ -3803,6 +3861,29 @@ function autoFillEmailField(name, fieldName) {
 // Backward-compatible alias (kept in case anything else still calls it by name)
 function autoFillEmail(name) { autoFillEmailField(name, 'Assigned_To_Email'); }
 
+// Same delimiter set the backend and the read-side filters already split
+// "Assigned To" / "Support Person" on (comma / slash / ampersand / plus).
+function splitPeopleNamesFE(str) {
+  return String(str||'').split(/[,\/&+]+/).map(s=>s.trim()).filter(Boolean);
+}
+
+// Multi-person version of autoFillEmailField, for the Assigned To / Support
+// Person pickers: maps every selected name to its email and joins them with
+// ", " into the paired email field. Uses the same "don't clobber a manual
+// edit" guard as the single-value version, tracked via a data-autoval
+// attribute since there's no single "known email" to compare against here.
+function autoFillEmailFieldMulti(namesStr, fieldName) {
+  const emailField = document.querySelector('.form-input[name="'+fieldName+'"]');
+  if (!emailField || emailField.disabled) return;
+  const mapped = splitPeopleNamesFE(namesStr).map(getTeamEmail).filter(Boolean).join(', ');
+  const currentVal = emailField.value.trim();
+  const prevAuto = emailField.dataset.autoval || '';
+  if (!currentVal || currentVal === prevAuto) {
+    emailField.value = mapped;
+  }
+  emailField.dataset.autoval = mapped;
+}
+
 // Handles both the normal "pick a name" case and the "+ Add New Member…" sentinel
 // on the Assigned To / Support Person dropdowns.
 function handleTeamFieldChange(selectEl, emailFieldName) {
@@ -3812,6 +3893,93 @@ function handleTeamFieldChange(selectEl, emailFieldName) {
     return;
   }
   autoFillEmailField(selectEl.value, emailFieldName);
+}
+
+// ─── Assigned To / Support Person multi-select picker ──────────
+// Pills + search dropdown for choosing more than one person, modeled on the
+// existing Depends-On task picker (initTaskDepsPicker). The hidden input
+// holds the selected names joined with ", " — the same string shape the
+// backend and every read-side filter already expect and split on.
+function initTeamMultiPicker(wrap) {
+  const hidden   = wrap.querySelector('input[type="hidden"]');
+  const pillsEl  = wrap.querySelector('.taskdeps-pills');
+  const searchEl = wrap.querySelector('.taskdeps-search');
+  const ddEl     = wrap.querySelector('.taskdeps-dropdown');
+  const emailFieldName = wrap.getAttribute('data-email-field') || '';
+  if (!hidden || !pillsEl) return;
+  let selected = splitPeopleNamesFE(hidden.value);
+
+  function syncHiddenAndEmail() {
+    hidden.value = selected.join(', ');
+    if (emailFieldName) autoFillEmailFieldMulti(hidden.value, emailFieldName);
+  }
+
+  function renderPills() {
+    pillsEl.innerHTML = selected.map(name => {
+      const removeBtn = searchEl ? '<span class="dep-chip-x" data-name="'+escAttr(name)+'">✕</span>' : '';
+      return '<span class="dep-chip person">'+escHtml(name)+removeBtn+'</span>';
+    }).join('');
+    if (searchEl) {
+      pillsEl.querySelectorAll('.dep-chip-x').forEach(x => x.addEventListener('click', () => {
+        selected = selected.filter(n => n !== x.getAttribute('data-name'));
+        syncHiddenAndEmail();
+        renderPills();
+        renderDropdown(searchEl.value);
+      }));
+    }
+  }
+
+  function renderDropdown(query) {
+    if (!ddEl) return;
+    const q = (query||'').trim().toLowerCase();
+    const pool = getTeamNames().filter(n => !selected.includes(n) && (!q || n.toLowerCase().includes(q)));
+    const showAdd = isLeader();
+    if (!pool.length && !showAdd) {
+      ddEl.innerHTML = '<div class="taskdeps-empty">No matching team members</div>';
+    } else {
+      ddEl.innerHTML = pool.map(n =>
+        '<div class="taskdeps-opt" data-name="'+escAttr(n)+'"><span class="tdo-id">'+escHtml(n)+'</span></div>'
+      ).join('') + (showAdd ? '<div class="taskdeps-opt" data-add="1"><span class="tdo-id" style="color:var(--accent)">'+ADD_MEMBER_OPTION+'</span></div>' : '');
+      ddEl.querySelectorAll('.taskdeps-opt').forEach(opt => opt.addEventListener('click', () => {
+        if (opt.getAttribute('data-add')) {
+          addMemberContext = { selectFieldName: hidden.name, emailFieldName, priorSelected: selected.slice() };
+          document.getElementById('am-name').value = '';
+          document.getElementById('am-email').value = '';
+          document.getElementById('am-role').value = '';
+          document.getElementById('am-dept').value = '';
+          document.getElementById('am-error').textContent = '';
+          document.getElementById('add-member-modal').classList.add('show');
+          ddEl.classList.remove('open');
+          return;
+        }
+        const name = opt.getAttribute('data-name');
+        if (!selected.includes(name)) selected.push(name);
+        syncHiddenAndEmail();
+        searchEl.value = '';
+        renderPills();
+        renderDropdown('');
+        ddEl.classList.remove('open');
+      }));
+    }
+  }
+
+  // Exposed so applyDraft()/submitAddMember() can re-sync pills after the
+  // hidden input's value was set directly rather than through add/remove.
+  wrap.refreshTeamMulti = function() {
+    selected = splitPeopleNamesFE(hidden.value);
+    renderPills();
+    if (searchEl) renderDropdown(searchEl.value);
+  };
+
+  renderPills();
+  // Initial email sync so editing an existing multi-assignee task resolves
+  // emails on load, same as the old single-select did.
+  if (selected.length) syncHiddenAndEmail();
+  if (!searchEl) return; // locked/read-only — pills only, no picker
+
+  searchEl.addEventListener('focus', () => { renderDropdown(searchEl.value); ddEl.classList.add('open'); });
+  searchEl.addEventListener('input', () => { renderDropdown(searchEl.value); ddEl.classList.add('open'); });
+  document.addEventListener('click', e => { if (!wrap.contains(e.target)) ddEl.classList.remove('open'); });
 }
 
 // ─── Add Team Member modal ─────────────────────────────────────
@@ -3963,7 +4131,17 @@ async function submitAddMember() {
     // Re-select the newly added person in whichever dropdown triggered this
     if (ctx) {
       const selEl = document.querySelector('.form-input[name="'+ctx.selectFieldName+'"]');
-      if (selEl) { selEl.value = name; handleTeamFieldChange(selEl, ctx.emailFieldName); }
+      if (selEl) {
+        if (ctx.priorSelected) {
+          // Multi-select picker: keep everyone already chosen, add the new person too.
+          selEl.value = ctx.priorSelected.concat([name]).join(', ');
+          const wrap = selEl.closest('.teammulti-wrap');
+          if (wrap && wrap.refreshTeamMulti) wrap.refreshTeamMulti();
+          if (ctx.emailFieldName) autoFillEmailFieldMulti(selEl.value, ctx.emailFieldName);
+        } else {
+          selEl.value = name; handleTeamFieldChange(selEl, ctx.emailFieldName);
+        }
+      }
     }
     loadData(); // background refresh to stay in sync with the sheet
   } catch(e) {
@@ -3977,13 +4155,17 @@ async function submitForm() {
   const btn=document.getElementById('btn-submit');
   const origText=btn.textContent;
   btn.disabled=true; btn.innerHTML='<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>Saving…</span>';
+  // 20s timeout so a hung/dropped request can't leave the button stuck on
+  // "Saving…" forever either — same finally below re-enables it either way.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
   try {
     if(isBatchMode){
       const batchText=body.querySelector('[name="batch"]')?.value||'';
       const headers=schema.fields.filter(f=>!f.section).map(f=>f.key);
       const rows=batchText.split('\n').map(line=>{const vals=line.split(',').map(v=>v.trim());const obj={};headers.forEach((h,i)=>obj[h]=vals[i]||'');return obj;}).filter(r=>Object.values(r).some(v=>v));
       if(!rows.length){showToast('No data to submit','error');return;}
-      const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify({action:'batchAppend',tabName:currentTab,rows,token:getIdentityToken()||''})});
+      const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',signal:controller.signal,body:JSON.stringify({action:'batchAppend',tabName:currentTab,rows,token:getIdentityToken()||''})});
       const r=await res.json(); if(r.error){showToast(r.error,'error');return;} showToast('Added '+r.count+' rows','success');
     } else {
       const formData={}; body.querySelectorAll('.form-input:not([disabled])').forEach(el=>{if(el.name) formData[el.name]=el.value;});
@@ -3995,14 +4177,21 @@ async function submitForm() {
         // Read email from DOM directly (works even if disabled), fall back to map
         const emailEl=body.querySelector('[name="Assigned_To_Email"]');  // no :not([disabled])
         const emailVal=(emailEl?emailEl.value.trim():'')||(formData['Assigned_To_Email']||'');
-        formData['Assigned_To_Email'] = emailVal || getTeamEmail(assignedTo);
+        formData['Assigned_To_Email'] = emailVal || splitPeopleNamesFE(assignedTo).map(getTeamEmail).filter(Boolean).join(', ');
 
         const supportEl=body.querySelector('.form-input[name="Support Person"]');
         const supportPerson=supportEl?supportEl.value:(formData['Support Person']||'');
         if(supportPerson) formData['Support Person']=supportPerson;
         const ccEmailEl=body.querySelector('[name="Support_Person_Email"]');  // no :not([disabled])
         const ccEmailVal=(ccEmailEl?ccEmailEl.value.trim():'')||(formData['Support_Person_Email']||'');
-        formData['Support_Person_Email'] = ccEmailVal || getTeamEmail(supportPerson);
+        formData['Support_Person_Email'] = ccEmailVal || splitPeopleNamesFE(supportPerson).map(getTeamEmail).filter(Boolean).join(', ');
+
+        const supervisorEl=body.querySelector('.form-input[name="Supervisor"]');
+        const supervisorName=supervisorEl?supervisorEl.value:(formData['Supervisor']||'');
+        if(supervisorName) formData['Supervisor']=supervisorName;
+        const supervisorEmailEl=body.querySelector('[name="Supervisor_Email"]');  // no :not([disabled])
+        const supervisorEmailVal=(supervisorEmailEl?supervisorEmailEl.value.trim():'')||(formData['Supervisor_Email']||'');
+        formData['Supervisor_Email'] = supervisorEmailVal || splitPeopleNamesFE(supervisorName).map(getTeamEmail).filter(Boolean).join(', ');
 
         // Same "read regardless of disabled state" fix as above — the Deadline
         // datepicker's hidden input gets `disabled` whenever the field is
@@ -4020,17 +4209,29 @@ async function submitForm() {
         ?{action:(schema.updateAction||'updateRow'),tabName:currentTab,id:editingRowId,data:formData,token:getIdentityToken()||''}
         :{action:schema.appendAction,data:formData,token:getIdentityToken()||'',...(isNewTask?{sendEmail:true}:{})};
 
-      const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
+      const res=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',signal:controller.signal,body:JSON.stringify(payload)});
       const r=await res.json(); if(r.error){showToast(r.error,'error');return;} showToast(editingRowId?'Updated!':'Added!','success');
     }
     clearDraft(currentTab, editingRowId); closeDrawer(true); loadData(); // non-blocking reload
   } catch(e){
     const msg = e.message||String(e);
+    const isAbort = e.name === 'AbortError';
     const isCORS = msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS');
     if(isCORS) showCORSBanner('cors');
-    showToast(isCORS ? 'Save failed — CORS error (see banner for fix)' : 'Error: '+msg,'error');
+    // Nothing was saved on any of these paths, form data is untouched and the
+    // Save button is about to be re-enabled below — so "just press Save
+    // again" is a real, working retry, not just a reassurance.
+    if(isAbort) showToast('Save timed out — check your connection and tap Save to retry','error');
+    else showToast((isCORS ? 'Save failed — CORS error (see banner for fix)' : 'Error: '+msg) + '. Tap Save to retry.','error');
+  } finally {
+    // Was: this reset lived after the try/catch, not inside a finally — so
+    // every early `return` above (missing required fields, empty batch, a
+    // server-side r.error) skipped it entirely and left the button stuck on
+    // "Saving…" with no way to click it again short of closing the drawer.
+    // Only the thrown-exception path (network errors) happened to reach it.
+    clearTimeout(timeoutId);
+    btn.disabled=false; btn.textContent=origText;
   }
-  btn.disabled=false; btn.textContent=origText;
 }
 
 function editRow(id,tab){
@@ -4151,16 +4352,91 @@ function calFilterChanged() {
   try { localStorage.setItem('nexus_cal_filter', JSON.stringify(state)); } catch(e) {}
   renderCalendar();
 }
+
+// ── #16 "mine only" / #16a per-person calendar filter ──────────────────
+// Stored as a single name (filter to that person) or the sentinel
+// '__ALL__' (whole org, i.e. today's existing behavior). No saved value
+// yet ("nexus_cal_person" never set) defaults to:
+//   - leaders/supervisors: their own name ("My Calendar") — 16a's picker
+//     defaults to "My Calendar" until they pick someone else.
+//   - everyone else: whole org (unchanged prior behavior) until they flip
+//     on 16's "Mine only" toggle.
+// Regular members only ever get null vs. their own name via the simple
+// checkbox; the per-person picker itself is leader-gated (16a), since
+// browsing a specific teammate's full schedule is more sensitive than
+// filtering your own.
+function getCalPersonFilter() {
+  let saved = null;
+  try { saved = localStorage.getItem('nexus_cal_person'); } catch(e) {}
+  if (saved === '__ALL__') return null;
+  if (saved) return saved;
+  return isLeader() ? (getIdentity() || null) : null;
+}
+function setCalPersonFilter(nameOrAll) {
+  try { localStorage.setItem('nexus_cal_person', nameOrAll || '__ALL__'); } catch(e) {}
+  renderCalPersonFilterUI();
+  renderCalendar();
+}
+// Renders either the leader-only person picker (16a) or the plain "mine
+// only" checkbox (16) into the #cal-person-filter slot in the filter row.
+function renderCalPersonFilterUI() {
+  const wrap = document.getElementById('cal-person-filter');
+  if (!wrap) return;
+  const me = getIdentity();
+  if (isLeader()) {
+    const current = getCalPersonFilter(); // resolved value — defaults to "me" for leaders
+    const names = getTeamNames().filter(n => n !== me);
+    const opts = ['<option value="__ALL__">Whole Org</option>']
+      .concat(me ? ['<option value="'+escAttr(me)+'">My Calendar</option>'] : [])
+      .concat(names.map(n => '<option value="'+escAttr(n)+'">'+escHtml(n)+'</option>'));
+    wrap.innerHTML = '<select id="cal-person-select" class="form-input" '
+      + 'style="width:auto;display:inline-block;font-size:11px;padding:3px 6px;margin-left:10px" '
+      + 'onchange="calPersonSelectChanged()">' + opts.join('') + '</select>';
+    const sel = document.getElementById('cal-person-select');
+    sel.value = current === null ? '__ALL__' : current;
+    if (!sel.value) sel.value = '__ALL__'; // saved name no longer in roster — fail safe to whole org
+  } else {
+    const checked = getCalPersonFilter() !== null;
+    wrap.innerHTML = '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:10px">'
+      + '<input type="checkbox" id="cal-mine-only"' + (checked ? ' checked' : '') + ' onchange="calMineOnlyChanged()">Mine only</label>';
+  }
+}
+function calPersonSelectChanged() {
+  const sel = document.getElementById('cal-person-select');
+  if (sel) setCalPersonFilter(sel.value);
+}
+function calMineOnlyChanged() {
+  const cb = document.getElementById('cal-mine-only');
+  const me = getIdentity();
+  if (!cb) return;
+  if (cb.checked && !me) { showToast('Log in to filter to your own calendar', 'error'); cb.checked = false; return; }
+  setCalPersonFilter(cb.checked ? me : '__ALL__');
+}
+// Checks whether personCanon (already canonicalized+uppercased) appears in
+// any of the given raw field values. Fields may hold multiple names
+// separated by comma/slash/ampersand/plus, same convention used for
+// "Assigned To" elsewhere in the app.
+function calFieldsMatchPerson(personCanon, fields) {
+  return fields.some(f => String(f || '').split(/[,\/&+]+/)
+    .map(n => canonicalizeName(n.trim()).toUpperCase())
+    .includes(personCanon));
+}
+
 function buildCalEvents() {
   // Returns a map: 'YYYY-MM-DD' -> [{type, color, title, meta, taskId?, meetingId?}]
   // taskId/meetingId power the "click event to open task/meeting" UX in the popover.
   const filter = getCalFilterState();
+  const person = getCalPersonFilter();
+  const personCanon = person ? canonicalizeName(person.trim()).toUpperCase() : null;
   const evMap = {};
   const add = (iso, ev) => { if (!evMap[iso]) evMap[iso] = []; evMap[iso].push(ev); };
 
   // Task start dates — separate from deadlines, was never plotted before
   if (filter.start) (appData.tasks || []).forEach(t => {
     if (!t['Start Date']) return;
+    // Assignee / supervisor (+ support person, same "involved on this task"
+    // set used elsewhere in the app) all count as "mine" for calendar purposes.
+    if (personCanon && !calFieldsMatchPerson(personCanon, [t['Assigned To'], t['Supervisor'], t['Support Person']])) return;
     const iso = String(t['Start Date']).slice(0,10);
     add(iso, {
       type  : 'start',
@@ -4174,6 +4450,7 @@ function buildCalEvents() {
   // Task deadlines — include taskId so popover can editRow() directly
   if (filter.deadline) (appData.tasks || []).forEach(t => {
     if (!t.Deadline) return;
+    if (personCanon && !calFieldsMatchPerson(personCanon, [t['Assigned To'], t['Supervisor'], t['Support Person']])) return;
     const iso = String(t.Deadline).slice(0,10);
     const isOverdue = new Date(iso) < new Date(new Date().toDateString());
     add(iso, {
@@ -4185,9 +4462,11 @@ function buildCalEvents() {
     });
   });
 
-  // Meetings — include meetingId so popover can navigate to meetings view
+  // Meetings — include meetingId so popover can navigate to meetings view.
+  // "Mine" = organizing it or being on the invite list.
   if (filter.meeting) (appData.meetings || []).forEach(m => {
     if (!m.Date) return;
+    if (personCanon && !calFieldsMatchPerson(personCanon, [m.Organiser, m.Team_Invitees])) return;
     const iso = String(m.Date).slice(0,10);
     const locType = (m.Location_Type || m.Type || m['Meeting Type'] || '').toLowerCase();
     const color = locType.includes('zoom') ? '#2d8cff' : locType.includes('meet') ? '#00c367' : '#f0a030';
@@ -4203,6 +4482,7 @@ function buildCalEvents() {
   // Partnership follow-ups
   if (filter.partner) (appData.partners || []).forEach(p => {
     if (!p['Follow-Up Date']) return;
+    if (personCanon && !calFieldsMatchPerson(personCanon, [p['Assigned To']])) return;
     const iso = String(p['Follow-Up Date']).slice(0,10);
     add(iso, {
       type : 'partner',
@@ -4218,6 +4498,7 @@ function buildCalEvents() {
 function renderCalendar() {
   const filterState = getCalFilterState();
   document.querySelectorAll('#cal-filter input[data-caltype]').forEach(cb => { cb.checked = filterState[cb.dataset.caltype] !== false; });
+  if (!document.getElementById('cal-person-filter').firstChild) renderCalPersonFilterUI();
 
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('cal-month-label').textContent = monthNames[calMonth] + ' ' + calYear;
