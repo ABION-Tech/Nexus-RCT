@@ -706,6 +706,11 @@
 <div id="profile-modal">
   <div class="login-box">
     <div class="profile-avatar-wrap" id="profile-avatar-wrap"></div>
+    <input type="file" id="profile-photo-input" accept="image/*" style="display:none" onchange="handleProfilePhotoSelected(this)">
+    <div style="display:flex;justify-content:center;gap:10px;margin:-6px 0 10px">
+      <span style="font-size:10px;color:var(--accent);cursor:pointer;font-family:'Space Mono',monospace" onclick="document.getElementById('profile-photo-input').click()">Change photo</span>
+      <span id="profile-remove-photo-btn" style="font-size:10px;color:var(--danger);cursor:pointer;font-family:'Space Mono',monospace;display:none" onclick="removeProfilePhoto()">Remove photo</span>
+    </div>
     <h2 id="profile-name-text">—</h2>
     <span id="profile-role-pill">Team Member</span>
     <div id="profile-email"></div>
@@ -1055,7 +1060,7 @@
         </div>
         <div class="dash-grid">
           <div class="card">
-            <div class="card-head"><h3>Recent Tasks</h3><span class="sub">Latest 6</span></div>
+            <div class="card-head"><h3>Recent Tasks</h3><span class="sub" style="display:flex;align-items:center;gap:5px">Latest <button class="btn-sm" style="padding:1px 7px;line-height:1.4" onclick="adjustRecentTasksCount(-10)">−10</button><span id="dash-recent-count-label">6</span><button class="btn-sm" style="padding:1px 7px;line-height:1.4" onclick="adjustRecentTasksCount(10)">+10</button></span></div>
             <div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Task</th><th>Assigned</th><th>Deadline</th><th>Status</th><th>Progress</th><th>Notes</th></tr></thead><tbody id="dash-tasks-tbody"></tbody></table></div>
           </div>
         </div>
@@ -1426,6 +1431,7 @@ const FORM_SCHEMAS = {
       {key:'Depends On',label:'Depends On',type:'taskdeps',leaderOnly:true},
       {section:'Notes'},
       {key:'Notes',label:'Notes',type:'textarea',placeholder:'Additional context...'},
+      {key:'Attached Link',label:'Attached Link / Doc',type:'url',placeholder:'https://... — reference doc, brief, etc.'},
       {key:'Proof Link',label:'Proof Link',type:'url',placeholder:'https://...',hideOnCreate:true},
       {key:'_drive_share',label:'Attach a Drive File',type:'drivelink',hideOnCreate:true},
       {section:'Follow-Up'},
@@ -1486,7 +1492,7 @@ const FORM_SCHEMAS = {
     {key:'Meeting_ID',label:'Meeting ID',type:'text',readonly:true},
     {key:'Title',label:'Title',type:'text',required:true},
     {section:'When'},{key:'Date',label:'Date',type:'date',required:true},{key:'Time',label:'Time',type:'time'},{key:'Duration_Mins',label:'Duration (mins)',type:'number'},
-    {section:'Platform'},{key:'Location_Type',label:'Type',type:'select',options:['Zoom','Google Meet','Physical']},{key:'Location_Address',label:'Address / Link',type:'text'},
+    {section:'Platform'},{key:'Location_Type',label:'Type',type:'select',options:['Zoom','Google Meet','Physical']},{key:'Location_Address',label:'Address / Link',type:'text'},{key:'Zoom_Link',label:'Join Link',type:'url',placeholder:'https://meet.google.com/… or zoom.us/… — paste after creating in Calendar'},
     {section:'People'},{key:'Organiser',label:'Organiser',type:'text'},{key:'Team_Invitees',label:'Team Invitees',type:'text'},{key:'External_Emails',label:'External Emails',type:'text',placeholder:'email1@x.com, email2@x.com'},
     {section:'Details'},{key:'Agenda',label:'Agenda',type:'textarea'},
   ]},
@@ -1507,6 +1513,47 @@ function getTeamEmail(name) {
   const canon = canonicalizeName(name).trim().toUpperCase();
   const fromRoster = (appData.team||[]).find(m=>canonicalizeName(String(m['Name']||'').trim()).toUpperCase()===canon);
   return (fromRoster && fromRoster['Email']) || '';
+}
+// Roster's stored Picture (Google-synced or a custom upload — see
+// saveTeamMemberPicture/uploadTeamMemberPicture in code.gs). Blank if the
+// person hasn't logged in yet or the sheet predates this column.
+function getPersonPicture(name) {
+  if (!name) return '';
+  const canon = canonicalizeName(name).trim().toUpperCase();
+  const fromRoster = (appData.team||[]).find(m=>canonicalizeName(String(m['Name']||'').trim()).toUpperCase()===canon);
+  return (fromRoster && fromRoster['Picture']) || '';
+}
+const AVATAR_COLORS = ['#5b52f0','#00d4a0','#f0a030','#f05060','#4090f0','#a060f0','#20c0a0'];
+function personInitials(name) {
+  return String(name||'').trim().split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?';
+}
+// Deterministic per-name color (not index-based) so the same person gets
+// the same fallback color everywhere, even in contexts with no shared list
+// to index into (chat, mentions) — unlike the old team-grid-only version.
+function personColor(name) {
+  const s = String(name||''); let hash = 0;
+  for (let i=0;i<s.length;i++) hash = (hash*31 + s.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+function avatarFallbackHtml(name, sizePx) {
+  const size = sizePx||26, color = personColor(name);
+  return '<div style="width:'+size+'px;height:'+size+'px;border-radius:50%;background:'+color+'22;border:2px solid '+color+'55;display:flex;align-items:center;justify-content:center;font-size:'+Math.round(size*0.38)+'px;font-weight:700;color:'+color+';font-family:\'Space Mono\',monospace;flex-shrink:0">'+personInitials(name)+'</div>';
+}
+// Called via onerror if a stored photo URL 404s/expires — swaps to the
+// initials fallback instead of showing a broken image icon.
+function avatarImgError(img) {
+  const name = img.getAttribute('data-name')||'', size = parseInt(img.getAttribute('data-size'),10)||26;
+  const wrap = document.createElement('span'); wrap.innerHTML = avatarFallbackHtml(name, size);
+  if (img.parentNode) img.parentNode.replaceChild(wrap.firstChild, img);
+}
+// Shared avatar renderer — real photo with an initials-circle fallback.
+// Used everywhere a person's identity shows: Team Directory, chat, task
+// assignee/support/supervisor chips, mentions. Single source so all of
+// those stay visually consistent and pick up new photos the same way.
+function avatarHtml(name, sizePx) {
+  const size = sizePx||26, pic = getPersonPicture(name);
+  if (!pic) return avatarFallbackHtml(name, size);
+  return '<img src="'+escHtml(pic)+'" alt="'+escHtml(name)+'" data-name="'+escHtml(name)+'" data-size="'+size+'" style="width:'+size+'px;height:'+size+'px;border-radius:50%;object-fit:cover;border:2px solid '+personColor(name)+'55;flex-shrink:0" onerror="avatarImgError(this)">';
 }
 
 // Builds/refreshes the four UI elements that list team-member names: the
@@ -2110,7 +2157,22 @@ function renderDashboard() {
   if(overdue>0) alerts.push('<div class="alert-banner warn"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg><div><h4>'+overdue+' task(s) not updated in 2+ days</h4><p><button class="btn-sm" onclick="loadView(&apos;followup&apos;)" style="display:inline">View Follow-Ups</button></p></div></div>');
   document.getElementById('dashboard-alerts').innerHTML = alerts.join('');
   const recentTasks = [...tasks].sort((a,b)=>(b.Last_Updated||b.ID||'').localeCompare(a.Last_Updated||a.ID||''));
-  document.getElementById('dash-tasks-tbody').innerHTML = recentTasks.slice(0,6).map(t=>'<tr onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" style="cursor:pointer"><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+'</td><td>'+t['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+fmtDeadline(t,true)+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td>'+(t.Notes||'--')+'</td></tr>').join('')||noDataRow(7,'No tasks. Sync or add one.');
+  const recentCount = getRecentTasksCount();
+  document.getElementById('dash-recent-count-label').textContent = recentCount;
+  document.getElementById('dash-tasks-tbody').innerHTML = recentTasks.slice(0,recentCount).map(t=>'<tr onclick="editRow(\''+escQ(t.ID)+'\',\'1. Master Tasks\')" style="cursor:pointer"><td style="font-family:Space Mono,monospace;font-size:11px">'+t.ID+'</td><td>'+t['Task Description']+'</td><td>'+t['Assigned To']+'</td><td style="font-family:Space Mono,monospace;font-size:11px">'+fmtDeadline(t,true)+'</td><td>'+statusBadge(t.Status)+'</td><td>'+progressBar(t['% Progress'])+'</td><td>'+(t.Notes||'--')+'</td></tr>').join('')||noDataRow(7,'No tasks. Sync or add one.');
+}
+
+// Recent Tasks card's "Latest N" is user-adjustable (±10 per click,
+// floor of 6 — the original fixed default) instead of a hardcoded 6.
+// Persisted per-browser so it sticks across reloads/sessions.
+function getRecentTasksCount() {
+  const v = parseInt(localStorage.getItem('nexus_dash_recent_count'), 10);
+  return (v && v > 0) ? v : 6;
+}
+function adjustRecentTasksCount(delta) {
+  const next = Math.max(6, getRecentTasksCount() + delta);
+  localStorage.setItem('nexus_dash_recent_count', String(next));
+  renderDashboard();
 }
 
 // ============================================================
@@ -2337,8 +2399,20 @@ function renderMeetings() {
 function renderMtgCard(m,isUpcoming) {
   const typeLabel={'Zoom':'Zoom','Google Meet':'Google Meet','Physical':'Physical','Teams':'Teams','Phone':'Phone'};
   let linkHtml='';
-  if(m.Zoom_Link) linkHtml='<a href="'+escAttr(m.Zoom_Link)+'" target="_blank" class="mtg-link-btn '+(m.Location_Type==='Google Meet'?'meet':'zoom')+'">Join '+( m.Location_Type||'Meeting')+'</a>';
-  else if(m.Location_Address) linkHtml='<span class="mtg-link-btn physical">'+escAttr(m.Location_Address)+'</span>';
+  // Only use stored link if it is an absolute URL — a relative or malformed
+  // value would resolve against the NEXUS Vercel domain and 404.
+  const zl=(m.Zoom_Link||'').trim();
+  const isValidLink=zl&&(zl.startsWith('https://')||zl.startsWith('http://'));
+  if(isValidLink) {
+    linkHtml='<a href="'+escAttr(zl)+'" target="_blank" class="mtg-link-btn '+(m.Location_Type==='Google Meet'?'meet':'zoom')+'">Join '+(m.Location_Type||'Meeting')+'</a>';
+  } else if(m.Location_Type==='Google Meet') {
+    // No valid join link yet — open Google Calendar search so user can find
+    // the event and copy the Meet link, then paste it via the Edit drawer.
+    const calSearch='https://calendar.google.com/calendar/search?q='+encodeURIComponent(m.Title||'');
+    linkHtml='<a href="'+escAttr(calSearch)+'" target="_blank" class="mtg-link-btn meet" title="Find this meeting in Google Calendar to get the join link — then edit this record to save it">📅 Find in Calendar</a>';
+  } else if(m.Location_Address) {
+    linkHtml='<span class="mtg-link-btn physical">'+escAttr(m.Location_Address)+'</span>';
+  }
   const attendees=[m.Team_Invitees,m.External_Emails].filter(Boolean).join(', ')||'No attendees listed';
   return '<div class="mtg-card '+(isUpcoming?'upcoming':'past')+'">'
     +'<div class="mtg-title">'+(m.Title||'Untitled')+'</div>'
@@ -2612,7 +2686,7 @@ function renderTeam() {
       + '</div>' : '';
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:38px;height:38px;border-radius:50%;background:${color}22;border:2px solid ${color}55;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${color};font-family:'Space Mono',monospace;flex-shrink:0">${initials(name)}</div>
+        <div style="flex-shrink:0">${avatarHtml(name, 38)}</div>
         <div style="min-width:0">
           <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div>
           <div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">${info.role}</div>
@@ -3072,7 +3146,8 @@ function renderChatMessages(container, messages) {
     const mine = canonicalizeName(m.Author) === canonicalizeName(me);
     const time = new Date(m.Timestamp).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, day: 'numeric', month: 'short' });
     const actionsHtml = m.MsgType === 'task_assigned' ? renderTaskAssignedActions(m.TaskID) : '';
-    return '<div class="chat-msg' + (mine ? ' mine' : '') + (m.MsgType ? ' chat-msg-system' : '') + '"><div class="cm-author">' + escHtml(canonicalizeName(m.Author)) + '</div><div>' + renderMessageBody(m.Message) + '</div>' + actionsHtml + '<div class="cm-time">' + time + '</div></div>';
+    const authorAvatar = m.MsgType ? '' : '<span style="display:inline-flex;vertical-align:middle;margin-right:5px">' + avatarHtml(m.Author, 16) + '</span>';
+    return '<div class="chat-msg' + (mine ? ' mine' : '') + (m.MsgType ? ' chat-msg-system' : '') + '"><div class="cm-author">' + authorAvatar + escHtml(canonicalizeName(m.Author)) + '</div><div>' + renderMessageBody(m.Message) + '</div>' + actionsHtml + '<div class="cm-time">' + time + '</div></div>';
   }).join('');
 }
 
@@ -3509,18 +3584,75 @@ function openProfileModal() {
   document.getElementById('profile-email').textContent = email || '';
   document.getElementById('profile-change-pw-btn').style.display = leaderFlag ? 'block' : 'none';
   const avatarWrap = document.getElementById('profile-avatar-wrap');
-  const pic = getTeamPicture();
+  const canon = canonicalizeName(name).trim().toUpperCase();
+  const rosterRow = (appData.team||[]).find(m=>canonicalizeName(String(m['Name']||'').trim()).toUpperCase()===canon);
+  const pic = (rosterRow && rosterRow['Picture']) || getTeamPicture();
+  const isCustom = !!(rosterRow && String(rosterRow['Custom_Picture']||'').trim().toUpperCase()==='Y');
   if (pic) {
     avatarWrap.innerHTML = '<img class="profile-avatar" src="' + pic.replace(/"/g,'&quot;') + '" alt="' + name.replace(/"/g,'&quot;') + '">';
   } else {
     const initials = name.trim().split(/\s+/).map(p => p[0]).slice(0,2).join('').toUpperCase();
     avatarWrap.innerHTML = '<div class="profile-avatar-fallback">' + initials + '</div>';
   }
+  document.getElementById('profile-remove-photo-btn').style.display = isCustom ? 'inline' : 'none';
   document.getElementById('profile-modal').classList.add('show');
   refreshNotifyButtonState('profile-notify-btn');
 }
 function closeProfileModal() {
   document.getElementById('profile-modal').classList.remove('show');
+}
+
+// Reads the picked file, sends it to code.gs's uploadProfilePicture (which
+// stores it in Drive and marks the roster row Custom_Picture='Y' so a
+// routine Google login never silently overwrites it), then refreshes
+// local state so the new photo shows immediately everywhere without
+// waiting for the next full sync.
+async function handleProfilePhotoSelected(inputEl) {
+  const file = inputEl.files && inputEl.files[0];
+  if (!file) return;
+  if (file.size > 4 * 1024 * 1024) { showToast('Photo too large — please use something under 4MB', 'error'); inputEl.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const dataUrl = reader.result;
+      const res = await fetch(SCRIPT_URL, { method:'POST', redirect:'follow', body: JSON.stringify({ action:'uploadProfilePicture', token: getIdentityToken()||'', imageBase64: dataUrl, mimeType: file.type }) });
+      const r = await res.json();
+      if (r.error) { showToast(r.error, 'error'); return; }
+      applyOwnPictureUpdate(r.url, true);
+      showToast('Photo updated', 'success');
+    } catch (e) {
+      showToast('Network error uploading photo', 'error');
+    } finally {
+      inputEl.value = '';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function removeProfilePhoto() {
+  try {
+    const res = await fetch(SCRIPT_URL, { method:'POST', redirect:'follow', body: JSON.stringify({ action:'resetProfilePicture', token: getIdentityToken()||'' }) });
+    const r = await res.json();
+    if (r.error) { showToast(r.error, 'error'); return; }
+    applyOwnPictureUpdate(r.url || '', false);
+    showToast('Reverted to your Google photo', 'success');
+  } catch (e) {
+    showToast('Network error removing photo', 'error');
+  }
+}
+
+// Updates the own-session localStorage copy (used as a pre-sync fallback
+// elsewhere) and appData.team's own row (so avatarHtml() reflects the
+// change immediately, everywhere, without a full reload), then re-renders
+// whichever view is open plus the profile modal itself.
+function applyOwnPictureUpdate(url, isCustom) {
+  if (url) localStorage.setItem('nexus_team_picture', url); else localStorage.removeItem('nexus_team_picture');
+  const name = getIdentity();
+  const canon = canonicalizeName(name).trim().toUpperCase();
+  const row = (appData.team||[]).find(m=>canonicalizeName(String(m['Name']||'').trim()).toUpperCase()===canon);
+  if (row) { row['Picture'] = url; row['Custom_Picture'] = isCustom ? 'Y' : ''; }
+  openProfileModal();
+  if (typeof renderTeam === 'function' && isLeader()) { try { renderTeam(); } catch(e) {} }
 }
 
 function togglePwVisibility(inputId, btn) {
@@ -3917,7 +4049,7 @@ function initTeamMultiPicker(wrap) {
   function renderPills() {
     pillsEl.innerHTML = selected.map(name => {
       const removeBtn = searchEl ? '<span class="dep-chip-x" data-name="'+escAttr(name)+'">✕</span>' : '';
-      return '<span class="dep-chip person">'+escHtml(name)+removeBtn+'</span>';
+      return '<span class="dep-chip person">'+avatarHtml(name,14)+'<span>'+escHtml(name)+'</span>'+removeBtn+'</span>';
     }).join('');
     if (searchEl) {
       pillsEl.querySelectorAll('.dep-chip-x').forEach(x => x.addEventListener('click', () => {
@@ -3938,7 +4070,7 @@ function initTeamMultiPicker(wrap) {
       ddEl.innerHTML = '<div class="taskdeps-empty">No matching team members</div>';
     } else {
       ddEl.innerHTML = pool.map(n =>
-        '<div class="taskdeps-opt" data-name="'+escAttr(n)+'"><span class="tdo-id">'+escHtml(n)+'</span></div>'
+        '<div class="taskdeps-opt" data-name="'+escAttr(n)+'" style="display:flex;align-items:center;gap:6px">'+avatarHtml(n,16)+'<span class="tdo-id">'+escHtml(n)+'</span></div>'
       ).join('') + (showAdd ? '<div class="taskdeps-opt" data-add="1"><span class="tdo-id" style="color:var(--accent)">'+ADD_MEMBER_OPTION+'</span></div>' : '');
       ddEl.querySelectorAll('.taskdeps-opt').forEach(opt => opt.addEventListener('click', () => {
         if (opt.getAttribute('data-add')) {
