@@ -1,5 +1,5 @@
 // NEXUS · RescueTap — Service Worker
-const CACHE = 'nexus-v3';
+const CACHE = 'nexus-v5';
 const ASSETS = ['/'];
 const APP_URL = 'https://nexus-rct.vercel.app/';
 
@@ -62,9 +62,16 @@ self.addEventListener('notificationclick', event => {
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      // If NEXUS is already open, don't reload it to the homepage — hand
+      // the target URL to the page itself so it can navigate in-place
+      // (open the right task, chat thread, or notification panel) the
+      // same way clicking that item inside the app would. Falls back to
+      // openWindow only when there's no existing window to talk to.
       for (const client of clientList) {
-        if (client.url.indexOf(new URL(url).origin) === 0 && 'focus' in client) {
-          return client.focus();
+        if (client.url.indexOf(new URL(url).origin) === 0) {
+          client.postMessage({ type: 'nexus-navigate', url: url });
+          if ('focus' in client) return client.focus();
+          return;
         }
       }
       if (self.clients.openWindow) return self.clients.openWindow(url);
